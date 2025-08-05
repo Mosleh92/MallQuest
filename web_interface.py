@@ -1,5 +1,5 @@
 # Web Interface for Mall Gamification AI Control Panel
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort, g
 from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
@@ -7,6 +7,7 @@ from performance_module import PerformanceManager, record_performance_event
 import json
 import logging
 from datetime import datetime
+from config import TenantManager, BaseConfig
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,6 +26,38 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+
+# Tenant-specific system caches
+tenant_systems = {}
+tenant_dbs = {}
+
+
+@app.before_request
+def load_tenant():
+    """Middleware to load tenant configuration based on request domain."""
+    host = request.host.split(':')[0]
+    tenant = TenantManager.get_tenant(host)
+    if not tenant:
+        abort(404)
+
+    g.tenant = tenant
+
+    global mall_system, secure_db
+    if host not in tenant_systems:
+        tenant_systems[host] = MallGamificationSystem()
+        tenant_dbs[host] = SecureDatabase(tenant['schema'])
+    mall_system = tenant_systems[host]
+    secure_db = tenant_dbs[host]
+
+
+@app.context_processor
+def inject_tenant():
+    """Inject tenant branding into templates."""
+    tenant = getattr(g, 'tenant', {})
+    return {
+        'tenant_name': tenant.get('name', BaseConfig.MALL_NAME),
+        'tenant_theme': tenant.get('theme', 'default')
+    }
 
 # -----------------------------
 # AUTHENTICATION ROUTES

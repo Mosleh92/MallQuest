@@ -1,0 +1,7 @@
+{
+  "localhost": {
+    "schema": "mall_gamification.db",
+    "name": "Deerfields Mall",
+    "theme": "default"
+  }
+}

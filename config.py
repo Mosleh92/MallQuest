@@ -6,6 +6,7 @@ Supports Development, Production, and Testing environments
 
 import os
 import secrets
+import json
 from pathlib import Path
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
@@ -25,6 +26,7 @@ class BaseConfig:
     # Database Configuration
     DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///mall_gamification.db')
     DATABASE_PATH = os.getenv('DATABASE_PATH', 'mall_gamification.db')
+    TENANT_CONFIG_PATH = os.getenv('TENANT_CONFIG_PATH', 'tenants.json')
     
     # Redis Configuration (Optional)
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -166,6 +168,50 @@ class BaseConfig:
             'social_features': cls.ENABLE_SOCIAL_FEATURES,
             'vip_system': cls.ENABLE_VIP_SYSTEM
         }
+
+
+class TenantManager:
+    """Load and manage tenant-specific configuration."""
+
+    _tenants: Dict[str, Any] = {}
+
+    @classmethod
+    def _config_path(cls) -> Path:
+        return Path(BaseConfig.TENANT_CONFIG_PATH)
+
+    @classmethod
+    def load_tenants(cls) -> Dict[str, Any]:
+        """Load tenant configuration from JSON file."""
+        if not cls._tenants:
+            path = cls._config_path()
+            if path.exists():
+                cls._tenants = json.loads(path.read_text())
+            else:
+                cls._tenants = {}
+        return cls._tenants
+
+    @classmethod
+    def get_tenant(cls, domain: str) -> Optional[Dict[str, Any]]:
+        """Return configuration for a specific tenant domain."""
+        tenants = cls.load_tenants()
+        return tenants.get(domain)
+
+    @classmethod
+    def add_tenant(cls, domain: str, schema: str, name: str, theme: str = 'default') -> None:
+        """Add or update a tenant configuration and persist it."""
+        tenants = cls.load_tenants()
+        tenants[domain] = {
+            'schema': schema,
+            'name': name,
+            'theme': theme
+        }
+        cls.save_tenants()
+
+    @classmethod
+    def save_tenants(cls) -> None:
+        """Persist tenant configuration to JSON file."""
+        path = cls._config_path()
+        path.write_text(json.dumps(cls._tenants, indent=2))
 
 class DevelopmentConfig(BaseConfig):
     """Development environment configuration"""
