@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Deerfields Mall Gamification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input[type="text"], input[type="password"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .error {
+            color: #e74c3c;
+            background: #fdf2f2;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #fecaca;
+        }
+        
+        .success {
+            color: #059669;
+            background: #f0fdf4;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .mfa-section {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e1e5e9;
+        }
+        
+        .mfa-section.show {
+            display: block;
+        }
+        
+        .language-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        
+        .language-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+        
+        .language-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="language-switch">
+        <button class="language-btn" onclick="switchLanguage('en')">English</button>
+        <button class="language-btn" onclick="switchLanguage('ar')">العربية</button>
+    </div>
+    
+    <div class="login-container">
+        <div class="logo">🏪 Deerfields Mall</div>
+        <h2 id="login-title">Login</h2>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        <div id="success-message" class="success" style="display: none;"></div>
+        
+        <form id="login-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group">
+                <label for="user_id" id="user-id-label">User ID:</label>
+                <input type="text" id="user_id" name="user_id" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password" id="password-label">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group" id="otp-group" style="display: none;">
+                <label for="otp" id="otp-label">OTP Code:</label>
+                <input type="number" id="otp" name="otp" placeholder="Enter 6-digit code" maxlength="6">
+            </div>
+            
+            <button type="submit" class="btn" id="login-btn">Login</button>
+        </form>
+        
+        <div class="mfa-section" id="mfa-section">
+            <p id="mfa-text">Two-factor authentication is required. Please enter your OTP code.</p>
+            <button class="btn" onclick="setupMFA()" id="setup-mfa-btn">Setup MFA</button>
+        </div>
+    </div>
+    
+    <script>
+        let currentLanguage = 'en';
+        let mfaRequired = false;
+        
+        const translations = {
+            en: {
+                login: 'Login',
+                user_id: 'User ID:',
+                password: 'Password:',
+                otp: 'OTP Code:',
+                login_btn: 'Login',
+                mfa_required: 'Two-factor authentication is required. Please enter your OTP code.',
+                setup_mfa: 'Setup MFA',
+                error_credentials: 'Invalid credentials',
+                error_otp_required: 'OTP required',
+                error_otp_invalid: 'Invalid OTP code',
+                error_user_not_found: 'User not found',
+                error_required_fields: 'User ID and password are required'
+            },
+            ar: {
+                login: 'تسجيل الدخول',
+                user_id: 'معرف المستخدم:',
+                password: 'كلمة المرور:',
+                otp: 'رمز التحقق:',
+                login_btn: 'تسجيل الدخول',
+                mfa_required: 'مطلوب التحقق بخطوتين. يرجى إدخال رمز التحقق.',
+                setup_mfa: 'إعداد التحقق بخطوتين',
+                error_credentials: 'بيانات اعتماد غير صالحة',
+                error_otp_required: 'مطلوب رمز التحقق',
+                error_otp_invalid: 'رمز التحقق غير صحيح',
+                error_user_not_found: 'المستخدم غير موجود',
+                error_required_fields: 'معرف المستخدم وكلمة المرور مطلوبان'
+            }
+        };
+        
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            updateTexts();
+        }
+        
+        function updateTexts() {
+            const t = translations[currentLanguage];
+            document.getElementById('login-title').textContent = t.login;
+            document.getElementById('user-id-label').textContent = t.user_id;
+            document.getElementById('password-label').textContent = t.password;
+            document.getElementById('otp-label').textContent = t.otp;
+            document.getElementById('login-btn').textContent = t.login_btn;
+            document.getElementById('mfa-text').textContent = t.mfa_required;
+            document.getElementById('setup-mfa-btn').textContent = t.setup_mfa;
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('success-message').style.display = 'none';
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success-message');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+        }
+        
+        function hideMessages() {
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('success-message').style.display = 'none';
+        }
+        
+        function setupMFA() {
+            window.location.href = '/mfa/setup';
+        }
+        
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideMessages();
+            
+            const formData = new FormData(this);
+            const data = {
+                user_id: formData.get('user_id'),
+                password: formData.get('password')
+            };
+            
+            if (mfaRequired) {
+                data.otp = formData.get('otp');
+            }
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': formData.get('csrf_token')
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess('Login successful!');
+                    setTimeout(() => {
+                        window.location.href = result.redirect_url;
+                    }, 1000);
+                } else {
+                    if (result.mfa_required) {
+                        mfaRequired = true;
+                        document.getElementById('otp-group').style.display = 'block';
+                        document.getElementById('mfa-section').classList.add('show');
+                        showError(translations[currentLanguage].error_otp_required);
+                    } else {
+                        showError(result.error || translations[currentLanguage].error_credentials);
+                    }
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        });
+        
+        // Initialize with English
+        updateTexts();
+    </script>
+</body>
+</html> 

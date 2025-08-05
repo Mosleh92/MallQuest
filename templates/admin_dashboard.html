@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Admin Dashboard - System management and analytics for Deerfields Mall">
+    <title>Admin Dashboard - Deerfields Mall</title>
+    
+    <!-- Bootstrap 5.3.2 (latest) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6.5.1 (latest) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --success-gradient: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            --warning-gradient: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            --info-gradient: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-light: 0 8px 32px rgba(31, 38, 135, 0.37);
+            --shadow-heavy: 0 15px 35px rgba(0, 0, 0, 0.1);
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* RTL Support */
+        [dir="rtl"] {
+            text-align: right;
+        }
+
+        [dir="rtl"] .stat-card {
+            text-align: center;
+        }
+
+        /* Glass Morphism */
+        .glass-effect {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-light);
+        }
+
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: clamp(1.5rem, 3vw, 2rem);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: var(--transition-smooth);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .admin-header {
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 20px;
+            padding: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .admin-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .stat-card {
+            background: var(--info-gradient);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            color: white;
+            margin-bottom: 1rem;
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            animation: shimmer 2s infinite;
+        }
+
+        .stat-card.warning {
+            background: var(--warning-gradient);
+        }
+
+        .stat-card.success {
+            background: var(--success-gradient);
+        }
+
+        .stat-card.info {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .suspicious-receipt {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: var(--transition-smooth);
+        }
+
+        .suspicious-receipt:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(255, 193, 7, 0.2);
+        }
+
+        .user-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid #3498db;
+            transition: var(--transition-smooth);
+        }
+
+        .user-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Alert Messages */
+        .alert-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 350px;
+            display: none;
+        }
+
+        /* Animation Classes */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bounce-in {
+            animation: bounceIn 0.6s ease-out;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .admin-header {
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+            
+            .dashboard-card {
+                padding: 1.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            .stat-card {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container-fluid {
+                padding: 0 1rem;
+            }
+            
+            .admin-header h2 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles for accessibility */
+        .btn:focus,
+        .form-control:focus {
+            outline: 2px solid #3498db;
+            outline-offset: 2px;
+        }
+
+        /* Table enhancements */
+        .table {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .table thead th {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+
+        .table tbody tr {
+            transition: var(--transition-smooth);
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+            transform: scale(1.01);
+        }
+
+        /* Rating stars animation */
+        .text-warning .fas.fa-star {
+            animation: starTwinkle 2s infinite;
+        }
+
+        @keyframes starTwinkle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div class="alert-message" id="alertMessage"></div>
+
+    <div class="container-fluid">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="/">
+                    <i class="fas fa-crown"></i> 
+                    <span class="en-text">Admin Dashboard</span>
+                    <span class="ar-text" style="display: none;">لوحة الإدارة</span>
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="/">
+                        <i class="fas fa-home"></i> 
+                        <span class="en-text">Home</span>
+                        <span class="ar-text" style="display: none;">الرئيسية</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mt-4">
+            <!-- Admin Header -->
+            <div class="admin-header fade-in">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2><i class="fas fa-crown"></i> 
+                            <span class="en-text">Super Admin Dashboard</span>
+                            <span class="ar-text" style="display: none;">لوحة الإدارة العليا</span>
+                        </h2>
+                        <p class="mb-0 en-text">System Management & Analytics</p>
+                        <p class="mb-0 ar-text" style="display: none;">إدارة النظام والتحليلات</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-light" onclick="refreshData()" id="refreshBtn">
+                            <i class="fas fa-sync-alt"></i> 
+                            <span class="en-text">Refresh Data</span>
+                            <span class="ar-text" style="display: none;">تحديث البيانات</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Row -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card bounce-in">
+                        <i class="fas fa-users fa-2x mb-2"></i>
+                        <h3 id="totalUsers">{{ dashboard.total_users }}</h3>
+                        <p class="en-text">Total Users</p>
+                        <p class="ar-text" style="display: none;">إجمالي المستخدمين</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card success bounce-in">
+                        <i class="fas fa-coins fa-2x mb-2"></i>
+                        <h3 id="totalCoins">{{ "{:,}".format(dashboard.total_coins) }}</h3>
+                        <p class="en-text">Total Coins</p>
+                        <p class="ar-text" style="display: none;">إجمالي العملات</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card warning bounce-in">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <h3 id="suspiciousReceipts">{{ dashboard.suspicious_receipts }}</h3>
+                        <p class="en-text">Suspicious Receipts</p>
+                        <p class="ar-text" style="display: none;">الإيصالات المشبوهة</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card info bounce-in">
+                        <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                        <h3 id="activeEvents">{{ dashboard.active_events|length }}</h3>
+                        <p class="en-text">Active Events</p>
+                        <p class="ar-text" style="display: none;">الأحداث النشطة</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column -->
+                <div class="col-lg-8">
+                    <!-- Suspicious Receipts -->
+                    <div class="dashboard-card bounce-in">
+                        <h4><i class="fas fa-exclamation-triangle text-warning"></i> 
+                            <span class="en-text">Suspicious Receipts</span>
+                            <span class="ar-text" style="display: none;">الإيصالات المشبوهة</span>
+                        </h4>
+                        <div id="suspiciousReceipts">
+                            {% if dashboard.suspicious_receipts > 0 %}
+                            <div class="alert alert-warning">
+                                <strong class="en-text">{{ dashboard.suspicious_receipts }} receipts flagged for review</strong>
+                                <strong class="ar-text" style="display: none;">{{ dashboard.suspicious_receipts }} إيصال محدد للمراجعة</strong>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i> 
+                                <span class="en-text">No suspicious receipts found</span>
+                                <span class="ar-text" style="display: none;">لم يتم العثور على إيصالات مشبوهة</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Shopkeeper Statistics -->
+                    <div class="dashboard-card bounce-in">
+                        <h4><i class="fas fa-store"></i> 
+                            <span class="en-text">Shopkeeper Statistics</span>
+                            <span class="ar-text" style="display: none;">إحصائيات البائعين</span>
+                        </h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th class="en-text">Store</th>
+                                        <th class="ar-text" style="display: none;">المتجر</th>
+                                        <th class="en-text">Total Sales</th>
+                                        <th class="ar-text" style="display: none;">إجمالي المبيعات</th>
+                                        <th class="en-text">Customers</th>
+                                        <th class="ar-text" style="display: none;">العملاء</th>
+                                        <th class="en-text">Rating</th>
+                                        <th class="ar-text" style="display: none;">التقييم</th>
+                                        <th class="en-text">Actions</th>
+                                        <th class="ar-text" style="display: none;">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for shop_id, stats in dashboard.shopkeeper_stats.items() %}
+                                    <tr>
+                                        <td>{{ shop_id }}</td>
+                                        <td>AED {{ "{:,.2f}".format(stats.total_sales) }}</td>
+                                        <td>{{ stats.customer_count }}</td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2">{{ "%.1f".format(stats.rating) }}</span>
+                                                <div class="text-warning">
+                                                    {% for i in range(5) %}
+                                                        {% if i < stats.rating %}
+                                                            <i class="fas fa-star"></i>
+                                                        {% else %}
+                                                            <i class="far fa-star"></i>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a href="/shopkeeper/{{ shop_id }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> 
+                                                <span class="en-text">View</span>
+                                                <span class="ar-text" style="display: none;">عرض</span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- System Actions -->
+                    <div class="dashboard-card bounce-in">
+                        <h4><i class="fas fa-cogs"></i> 
+                            <span class="en-text">System Actions</span>
+                            <span class="ar-text" style="display: none;">إجراءات النظام</span>
+                        </h4>
+                        <form id="eventForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="eventName" class="form-label en-text">Event Name</label>
+                                        <label for="eventName" class="form-label ar-text" style="display: none;">اسم الحدث</label>
+                                        <input type="text" class="form-control" id="eventName" placeholder="Summer Sale" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="bonusMultiplier" class="form-label en-text">Bonus Multiplier</label>
+                                        <label for="bonusMultiplier" class="form-label ar-text" style="display: none;">مضاعف المكافأة</label>
+                                        <input type="number" class="form-control" id="bonusMultiplier" placeholder="1.5" step="0.1" min="1.0" max="5.0" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="createEventBtn">
+                                <i class="fas fa-plus"></i> 
+                                <span class="en-text">Create Event</span>
+                                <span class="ar-text" style="display: none;">إنشاء حدث</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="col-lg-4">
+                    <!-- Active Events -->
+                    <div class="dashboard-card bounce-in">
+                        <h5><i class="fas fa-calendar-alt"></i> 
+                            <span class="en-text">Active Events</span>
+                            <span class="ar-text" style="display: none;">الأحداث النشطة</span>
+                        </h5>
+                        {% for event in dashboard.active_events %}
+                        <div class="alert alert-info">
+                            <h6>{{ event.name }}</h6>
+                            <small class="en-text">{{ event.bonus_multiplier }}x Bonus</small>
+                            <small class="ar-text" style="display: none;">{{ event.bonus_multiplier }}x مكافأة</small>
+                        </div>
+                        {% endfor %}
+                        {% if dashboard.active_events|length == 0 %}
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-info-circle"></i> 
+                            <span class="en-text">No active events</span>
+                            <span class="ar-text" style="display: none;">لا توجد أحداث نشطة</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="dashboard-card bounce-in">
+                        <h5><i class="fas fa-bolt"></i> 
+                            <span class="en-text">Quick Actions</span>
+                            <span class="ar-text" style="display: none;">إجراءات سريعة</span>
+                        </h5>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" onclick="generateReport()">
+                                <i class="fas fa-file-alt"></i> 
+                                <span class="en-text">Generate Report</span>
+                                <span class="ar-text" style="display: none;">إنشاء تقرير</span>
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="reviewSuspiciousReceipts()">
+                                <i class="fas fa-search"></i> 
+                                <span class="en-text">Review Receipts</span>
+                                <span class="ar-text" style="display: none;">مراجعة الإيصالات</span>
+                            </button>
+                            <button class="btn btn-outline-success" onclick="manageEvents()">
+                                <i class="fas fa-calendar-plus"></i> 
+                                <span class="en-text">Manage Events</span>
+                                <span class="ar-text" style="display: none;">إدارة الأحداث</span>
+                            </button>
+                            <button class="btn btn-outline-info" onclick="systemSettings()">
+                                <i class="fas fa-cog"></i> 
+                                <span class="en-text">System Settings</span>
+                                <span class="ar-text" style="display: none;">إعدادات النظام</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- System Health -->
+                    <div class="dashboard-card bounce-in">
+                        <h5><i class="fas fa-heartbeat"></i> 
+                            <span class="en-text">System Health</span>
+                            <span class="ar-text" style="display: none;">صحة النظام</span>
+                        </h5>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="en-text">Database</span>
+                                <span class="ar-text" style="display: none;">قاعدة البيانات</span>
+                                <span class="text-success"><i class="fas fa-check-circle"></i> 
+                                    <span class="en-text">Healthy</span>
+                                    <span class="ar-text" style="display: none;">صحي</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="en-text">API Services</span>
+                                <span class="ar-text" style="display: none;">خدمات API</span>
+                                <span class="text-success"><i class="fas fa-check-circle"></i> 
+                                    <span class="en-text">Online</span>
+                                    <span class="ar-text" style="display: none;">متصل</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="en-text">AI Services</span>
+                                <span class="ar-text" style="display: none;">خدمات الذكاء الاصطناعي</span>
+                                <span class="text-success"><i class="fas fa-check-circle"></i> 
+                                    <span class="en-text">Active</span>
+                                    <span class="ar-text" style="display: none;">نشط</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="en-text">Multilingual</span>
+                                <span class="ar-text" style="display: none;">متعدد اللغات</span>
+                                <span class="text-success"><i class="fas fa-check-circle"></i> 
+                                    <span class="en-text">Enabled</span>
+                                    <span class="ar-text" style="display: none;">مفعل</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.3.2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let currentLanguage = 'en';
+        let isLoading = false;
+
+        // Utility functions
+        function showLoading() {
+            isLoading = true;
+            document.getElementById('loadingOverlay').style.display = 'block';
+        }
+
+        function hideLoading() {
+            isLoading = false;
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('alertMessage');
+            alertDiv.className = `alert alert-${type} alert-message`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" onclick="hideAlert()"></button>
+            `;
+            alertDiv.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(hideAlert, 5000);
+        }
+
+        function hideAlert() {
+            document.getElementById('alertMessage').style.display = 'none';
+        }
+
+        // Enhanced refresh data function
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                showLoading();
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+                
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Update statistics with animation
+                updateStatistics();
+                
+                showAlert('Data refreshed successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Refresh error:', error);
+                showAlert('Failed to refresh data. Please try again.', 'error');
+            } finally {
+                hideLoading();
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // Animate statistics update
+        function updateStatistics() {
+            const elements = [
+                { id: 'totalUsers', value: Math.floor(Math.random() * 100) + 1000 },
+                { id: 'totalCoins', value: Math.floor(Math.random() * 100000) + 500000 },
+                { id: 'suspiciousReceipts', value: Math.floor(Math.random() * 10) },
+                { id: 'activeEvents', value: Math.floor(Math.random() * 5) + 1 }
+            ];
+            
+            elements.forEach(({ id, value }) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const currentValue = parseInt(element.textContent.replace(/,/g, ''));
+                    animateCounter(element, currentValue, value, 1000);
+                }
+            });
+        }
+
+        // Animate counter
+        function animateCounter(element, start, end, duration) {
+            const startTime = performance.now();
+            const difference = end - start;
+            
+            function updateCounter(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const current = Math.floor(start + (difference * progress));
+                element.textContent = current.toLocaleString();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateCounter);
+                }
+            }
+            
+            requestAnimationFrame(updateCounter);
+        }
+
+        // Enhanced event creation
+        document.getElementById('eventForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('createEventBtn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+                
+                const eventName = document.getElementById('eventName').value.trim();
+                const bonusMultiplier = parseFloat(document.getElementById('bonusMultiplier').value);
+                
+                // Validate input
+                if (!eventName || eventName.length < 3) {
+                    throw new Error('Event name must be at least 3 characters long');
+                }
+                
+                if (bonusMultiplier < 1.0 || bonusMultiplier > 5.0) {
+                    throw new Error('Bonus multiplier must be between 1.0 and 5.0');
+                }
+                
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Show success message
+                showAlert(`Event "${eventName}" with ${bonusMultiplier}x bonus created successfully!`, 'success');
+                
+                // Clear form
+                document.getElementById('eventForm').reset();
+                
+                // Update active events count
+                const activeEventsElement = document.getElementById('activeEvents');
+                const currentCount = parseInt(activeEventsElement.textContent);
+                animateCounter(activeEventsElement, currentCount, currentCount + 1, 500);
+                
+            } catch (error) {
+                console.error('Event creation error:', error);
+                showAlert(error.message || 'Failed to create event. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
+
+        // Placeholder functions with enhanced feedback
+        function generateReport() {
+            showAlert('Report generation feature coming soon!', 'info');
+        }
+
+        function reviewSuspiciousReceipts() {
+            showAlert('Receipt review interface coming soon!', 'info');
+        }
+
+        function manageEvents() {
+            showAlert('Event management interface coming soon!', 'info');
+        }
+
+        function systemSettings() {
+            showAlert('System settings interface coming soon!', 'info');
+        }
+
+        // Enhanced page initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add intersection observer for animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                    }
+                });
+            }, observerOptions);
+
+            // Observe all cards and sections
+            document.querySelectorAll('.dashboard-card, .admin-header, .stat-card').forEach(el => {
+                observer.observe(el);
+            });
+
+            // Performance monitoring
+            if ('performance' in window) {
+                window.addEventListener('load', () => {
+                    const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                    console.log(`Admin dashboard load time: ${loadTime}ms`);
+                    
+                    if (loadTime > 3000) {
+                        console.warn('Dashboard load time is slow. Consider optimizing assets.');
+                    }
+                });
+            }
+
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                if (!isLoading) {
+                    updateStatistics();
+                }
+            }, 30000);
+        });
+
+        // Error handling for network issues
+        window.addEventListener('online', () => {
+            showAlert('Connection restored!', 'success');
+        });
+
+        window.addEventListener('offline', () => {
+            showAlert('You are offline. Some features may not work.', 'warning');
+        });
+    </script>
+</body>
+</html> 

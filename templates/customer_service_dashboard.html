@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Service Dashboard - Deerfields Mall</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .cs-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        .stat-card.warning {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        .stat-card.success {
+            background: linear-gradient(45deg, #27ae60, #229954);
+        }
+        .stat-card.info {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+        }
+        .ticket-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+        }
+        .ticket-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .ticket-item.open {
+            border-left-color: #e74c3c;
+        }
+        .ticket-item.resolved {
+            border-left-color: #27ae60;
+        }
+        .priority-high {
+            background: #ffe6e6;
+            border-left-color: #e74c3c;
+        }
+        .priority-medium {
+            background: #fff3cd;
+            border-left-color: #f39c12;
+        }
+        .priority-low {
+            background: #e8f5e8;
+            border-left-color: #27ae60;
+        }
+        .response-form {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="/">
+                    <i class="fas fa-headset"></i> Customer Service
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="/">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mt-4">
+            <!-- CS Header -->
+            <div class="cs-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2><i class="fas fa-headset"></i> Customer Service Dashboard</h2>
+                        <p class="mb-0">Support Ticket Management & Resolution</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-light" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Row -->
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card warning">
+                        <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                        <h3>{{ dashboard.open_tickets }}</h3>
+                        <p>Open Tickets</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card success">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <h3>{{ dashboard.resolved_tickets }}</h3>
+                        <p>Resolved Tickets</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <h3>{{ dashboard.open_tickets + dashboard.resolved_tickets }}</h3>
+                        <p>Total Tickets</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card info">
+                        <i class="fas fa-percentage fa-2x mb-2"></i>
+                        <h3>{{ "%.1f".format((dashboard.resolved_tickets / (dashboard.open_tickets + dashboard.resolved_tickets)) * 100) if (dashboard.open_tickets + dashboard.resolved_tickets) > 0 else 0 }}</h3>
+                        <p>Resolution Rate</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column -->
+                <div class="col-md-8">
+                    <!-- Recent Tickets -->
+                    <div class="dashboard-card">
+                        <h4><i class="fas fa-ticket-alt"></i> Recent Tickets</h4>
+                        <div id="ticketsContainer">
+                            {% for ticket in dashboard.recent_tickets %}
+                            <div class="ticket-item {{ ticket.status }} priority-{{ ticket.issue_type if ticket.issue_type else 'medium' }}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="mb-0">Ticket #{{ ticket.id[:8] }}</h6>
+                                            <span class="badge bg-{{ 'danger' if ticket.status == 'open' else 'success' }}">
+                                                {{ ticket.status|title }}
+                                            </span>
+                                        </div>
+                                        <p class="mb-1"><strong>Issue:</strong> {{ ticket.issue_type|title }}</p>
+                                        <p class="mb-1">{{ ticket.description }}</p>
+                                        <small class="text-muted">
+                                            User: {{ ticket.user_id }} | 
+                                            Language: {{ ticket.language|upper }} | 
+                                            {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                        </small>
+                                        
+                                        {% if ticket.status == 'open' %}
+                                        <div class="response-form">
+                                            <form class="ticket-response-form" data-ticket-id="{{ ticket.id }}">
+                                                <div class="mb-2">
+                                                    <label for="response-{{ ticket.id }}" class="form-label">Response</label>
+                                                    <textarea class="form-control" id="response-{{ ticket.id }}" rows="3" 
+                                                              placeholder="Enter your response..."></textarea>
+                                                </div>
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-reply"></i> Respond
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if ticket.status == 'resolved' and ticket.response %}
+                                        <div class="mt-2 p-2 bg-light rounded">
+                                            <small><strong>Response:</strong> {{ ticket.response }}</small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if dashboard.recent_tickets|length == 0 %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> No tickets found
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Create New Ticket (for testing) -->
+                    <div class="dashboard-card">
+                        <h4><i class="fas fa-plus-circle"></i> Create Test Ticket</h4>
+                        <form id="testTicketForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="testUserId" class="form-label">User ID</label>
+                                        <input type="text" class="form-control" id="testUserId" 
+                                               placeholder="user123" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="testIssueType" class="form-label">Issue Type</label>
+                                        <select class="form-select" id="testIssueType" required>
+                                            <option value="receipt_issue">Receipt Issue</option>
+                                            <option value="coin_missing">Missing Coins</option>
+                                            <option value="technical_issue">Technical Issue</option>
+                                            <option value="general_inquiry">General Inquiry</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="testDescription" class="form-label">Description</label>
+                                <textarea class="form-control" id="testDescription" rows="3" 
+                                          placeholder="Describe the issue..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Create Test Ticket
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="col-md-4">
+                    <!-- Response Templates -->
+                    <div class="dashboard-card">
+                        <h5><i class="fas fa-file-alt"></i> Response Templates</h5>
+                        <div class="mb-3">
+                            <button class="btn btn-outline-primary btn-sm w-100 mb-2" 
+                                    onclick="useTemplate('receipt_issue')">
+                                Receipt Issue Response
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm w-100 mb-2" 
+                                    onclick="useTemplate('coin_missing')">
+                                Missing Coins Response
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm w-100 mb-2" 
+                                    onclick="useTemplate('technical_issue')">
+                                Technical Issue Response
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="dashboard-card">
+                        <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary" onclick="viewAllTickets()">
+                                <i class="fas fa-list"></i> View All Tickets
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="exportTickets()">
+                                <i class="fas fa-download"></i> Export Tickets
+                            </button>
+                            <button class="btn btn-outline-success" onclick="generateReport()">
+                                <i class="fas fa-chart-bar"></i> Generate Report
+                            </button>
+                            <button class="btn btn-outline-info" onclick="csSettings()">
+                                <i class="fas fa-cog"></i> CS Settings
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Performance Metrics -->
+                    <div class="dashboard-card">
+                        <h5><i class="fas fa-chart-line"></i> Performance</h5>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Average Response Time</span>
+                                <span>2.5 hours</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Customer Satisfaction</span>
+                                <span class="text-success">4.8/5</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>First Contact Resolution</span>
+                                <span class="text-success">85%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="dashboard-card">
+                        <h5><i class="fas fa-clock"></i> Recent Activity</h5>
+                        <div class="mb-2">
+                            <small class="text-muted">2 minutes ago</small>
+                            <div>New ticket created</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">15 minutes ago</small>
+                            <div>Ticket #123 resolved</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">1 hour ago</small>
+                            <div>Response sent to user</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function refreshData() {
+            location.reload();
+        }
+
+        // Handle ticket response forms
+        document.querySelectorAll('.ticket-response-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const ticketId = this.dataset.ticketId;
+                const response = document.getElementById(`response-${ticketId}`).value;
+                
+                fetch('/api/respond-ticket', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ticket_id: ticketId,
+                        response: response,
+                        agent_id: 'cs_agent_001'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Response sent successfully!');
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error sending response');
+                });
+            });
+        });
+
+        // Create test ticket
+        document.getElementById('testTicketForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const userId = document.getElementById('testUserId').value;
+            const issueType = document.getElementById('testIssueType').value;
+            const description = document.getElementById('testDescription').value;
+            
+            fetch('/api/create-ticket', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    issue_type: issueType,
+                    description: description,
+                    language: 'en'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Test ticket created successfully!');
+                    document.getElementById('testTicketForm').reset();
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error creating ticket');
+            });
+        });
+
+        // Use response template
+        function useTemplate(templateType) {
+            const templates = {
+                'receipt_issue': 'We\'re investigating your receipt issue. Please allow 24-48 hours for review.',
+                'coin_missing': 'Your missing coins have been restored. Thank you for your patience.',
+                'technical_issue': 'Our technical team is working on resolving this issue.'
+            };
+            
+            const template = templates[templateType];
+            if (template) {
+                // Find the first open ticket response textarea
+                const textarea = document.querySelector('.ticket-response-form textarea');
+                if (textarea) {
+                    textarea.value = template;
+                } else {
+                    alert('No open tickets to respond to');
+                }
+            }
+        }
+
+        function viewAllTickets() {
+            alert('All tickets view coming soon!');
+        }
+
+        function exportTickets() {
+            alert('Ticket export feature coming soon!');
+        }
+
+        function generateReport() {
+            alert('Report generation coming soon!');
+        }
+
+        function csSettings() {
+            alert('CS settings coming soon!');
+        }
+    </script>
+</body>
+</html> 

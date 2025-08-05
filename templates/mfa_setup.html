@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFA Setup - Deerfields Mall Gamification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .setup-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .step {
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+        
+        .step h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .qr-container {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 2px dashed #e1e5e9;
+            border-radius: 10px;
+        }
+        
+        .qr-code {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: #666;
+            word-break: break-all;
+            padding: 10px;
+        }
+        
+        .backup-codes {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .backup-codes h4 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .code-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .code-item {
+            background: white;
+            padding: 8px;
+            border: 1px solid #e1e5e9;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 0.5rem;
+        }
+        
+        .error {
+            color: #e74c3c;
+            background: #fdf2f2;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #fecaca;
+        }
+        
+        .success {
+            color: #059669;
+            background: #f0fdf4;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .warning {
+            color: #d97706;
+            background: #fffbeb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #fed7aa;
+        }
+        
+        .instructions {
+            background: #f0f9ff;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .instructions ol {
+            margin-left: 1rem;
+        }
+        
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="logo">🏪 Deerfields Mall</div>
+        <h2 id="setup-title">Two-Factor Authentication Setup</h2>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        <div id="success-message" class="success" style="display: none;"></div>
+        
+        <div class="step">
+            <h3 id="step1-title">Step 1: Scan QR Code</h3>
+            <div class="instructions">
+                <ol>
+                    <li id="instruction1">Download an authenticator app (Google Authenticator, Authy, Microsoft Authenticator)</li>
+                    <li id="instruction2">Open the app and scan the QR code below</li>
+                    <li id="instruction3">Or manually enter the secret key if QR scanning doesn't work</li>
+                </ol>
+            </div>
+            
+            <div class="qr-container">
+                <div class="qr-code" id="qr-code">
+                    <div>
+                        <div style="margin-bottom: 10px;">📱</div>
+                        <div>QR Code will be generated</div>
+                        <div style="font-size: 0.8rem; margin-top: 10px;">Secret: {{ qr_code_url.split('secret=')[1] if qr_code_url else 'Loading...' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3 id="step2-title">Step 2: Backup Codes</h3>
+            <div class="warning">
+                <strong id="backup-warning">Important:</strong> Save these backup codes in a secure location. You can use them to access your account if you lose your authenticator device.
+            </div>
+            
+            <div class="backup-codes">
+                <h4 id="backup-title">Your Backup Codes:</h4>
+                <div class="code-grid" id="backup-codes-grid">
+                    {% for code in backup_codes %}
+                    <div class="code-item">{{ code }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3 id="step3-title">Step 3: Verify Setup</h3>
+            <p id="verify-text">Enter the 6-digit code from your authenticator app to complete the setup:</p>
+            
+            <form id="verify-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-group">
+                    <label for="otp" id="otp-label">OTP Code:</label>
+                    <input type="number" id="otp" name="otp" placeholder="Enter 6-digit code" maxlength="6" required>
+                </div>
+                
+                <button type="submit" class="btn" id="verify-btn">Verify and Enable MFA</button>
+            </form>
+        </div>
+        
+        <button class="btn btn-secondary" onclick="window.location.href='/player/{{ user_id }}'" id="skip-btn">Skip for Now</button>
+    </div>
+    
+    <script>
+        let currentLanguage = 'en';
+        
+        const translations = {
+            en: {
+                setup_title: 'Two-Factor Authentication Setup',
+                step1_title: 'Step 1: Scan QR Code',
+                step2_title: 'Step 2: Backup Codes',
+                step3_title: 'Step 3: Verify Setup',
+                instruction1: 'Download an authenticator app (Google Authenticator, Authy, Microsoft Authenticator)',
+                instruction2: 'Open the app and scan the QR code below',
+                instruction3: 'Or manually enter the secret key if QR scanning doesn\'t work',
+                backup_warning: 'Important:',
+                backup_title: 'Your Backup Codes:',
+                verify_text: 'Enter the 6-digit code from your authenticator app to complete the setup:',
+                otp_label: 'OTP Code:',
+                verify_btn: 'Verify and Enable MFA',
+                skip_btn: 'Skip for Now',
+                error_otp_required: 'OTP is required',
+                error_otp_invalid: 'Invalid OTP code',
+                error_setup_expired: 'MFA setup session expired',
+                success_enabled: 'MFA enabled successfully!'
+            },
+            ar: {
+                setup_title: 'إعداد التحقق بخطوتين',
+                step1_title: 'الخطوة 1: مسح رمز QR',
+                step2_title: 'الخطوة 2: رموز النسخ الاحتياطي',
+                step3_title: 'الخطوة 3: التحقق من الإعداد',
+                instruction1: 'قم بتحميل تطبيق المصادقة (Google Authenticator, Authy, Microsoft Authenticator)',
+                instruction2: 'افتح التطبيق وامسح رمز QR أدناه',
+                instruction3: 'أو أدخل المفتاح السري يدويًا إذا لم يعمل مسح QR',
+                backup_warning: 'مهم:',
+                backup_title: 'رموز النسخ الاحتياطي الخاصة بك:',
+                verify_text: 'أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة لإكمال الإعداد:',
+                otp_label: 'رمز التحقق:',
+                verify_btn: 'تحقق وتمكين التحقق بخطوتين',
+                skip_btn: 'تخطي الآن',
+                error_otp_required: 'مطلوب رمز التحقق',
+                error_otp_invalid: 'رمز التحقق غير صحيح',
+                error_setup_expired: 'انتهت صلاحية جلسة إعداد التحقق بخطوتين',
+                success_enabled: 'تم تمكين التحقق بخطوتين بنجاح!'
+            }
+        };
+        
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            updateTexts();
+        }
+        
+        function updateTexts() {
+            const t = translations[currentLanguage];
+            document.getElementById('setup-title').textContent = t.setup_title;
+            document.getElementById('step1-title').textContent = t.step1_title;
+            document.getElementById('step2-title').textContent = t.step2_title;
+            document.getElementById('step3-title').textContent = t.step3_title;
+            document.getElementById('instruction1').textContent = t.instruction1;
+            document.getElementById('instruction2').textContent = t.instruction2;
+            document.getElementById('instruction3').textContent = t.instruction3;
+            document.getElementById('backup-warning').textContent = t.backup_warning;
+            document.getElementById('backup-title').textContent = t.backup_title;
+            document.getElementById('verify-text').textContent = t.verify_text;
+            document.getElementById('otp-label').textContent = t.otp_label;
+            document.getElementById('verify-btn').textContent = t.verify_btn;
+            document.getElementById('skip-btn').textContent = t.skip_btn;
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('success-message').style.display = 'none';
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success-message');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+        }
+        
+        function hideMessages() {
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('success-message').style.display = 'none';
+        }
+        
+        // Generate QR code using a simple library or service
+        function generateQRCode(text) {
+            // For demo purposes, we'll use a simple QR code service
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
+            const qrDiv = document.getElementById('qr-code');
+            qrDiv.innerHTML = `<img src="${qrUrl}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">`;
+        }
+        
+        document.getElementById('verify-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideMessages();
+            
+            const formData = new FormData(this);
+            const data = {
+                otp: formData.get('otp')
+            };
+            
+            try {
+                const response = await fetch('/mfa/setup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': formData.get('csrf_token')
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(translations[currentLanguage].success_enabled);
+                    setTimeout(() => {
+                        window.location.href = '/player/{{ user_id }}';
+                    }, 2000);
+                } else {
+                    showError(result.error || translations[currentLanguage].error_otp_invalid);
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            }
+        });
+        
+        // Initialize with English and generate QR code
+        updateTexts();
+        if ('{{ qr_code_url }}' && '{{ qr_code_url }}' !== 'None') {
+            generateQRCode('{{ qr_code_url }}');
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Deerfields Mall Gamification System - Experience the future of shopping with AI-powered rewards">
+    <meta name="keywords" content="mall, gamification, rewards, shopping, Deerfields">
+    <title>Deerfields Mall Gamification System</title>
+    
+    <!-- Bootstrap 5.3.2 (latest) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6.5.1 (latest) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-light: 0 8px 32px rgba(31, 38, 135, 0.37);
+            --shadow-heavy: 0 15px 35px rgba(0, 0, 0, 0.1);
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* RTL Support */
+        [dir="rtl"] {
+            text-align: right;
+        }
+
+        [dir="rtl"] .language-btn {
+            margin-left: 0;
+            margin-right: 0.5rem;
+        }
+
+        /* Glass Morphism */
+        .glass-effect {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-light);
+        }
+
+        .hero-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            padding: clamp(2rem, 5vw, 4rem);
+            margin: 2rem 0;
+            color: white;
+            box-shadow: var(--shadow-light);
+            transition: var(--transition-smooth);
+        }
+
+        .hero-section:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-heavy);
+        }
+
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: clamp(1.5rem, 3vw, 2.5rem);
+            margin: 1rem 0;
+            transition: var(--transition-smooth);
+            text-decoration: none;
+            color: #333;
+            display: block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .dashboard-card:hover::before {
+            left: 100%;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            color: #333;
+            text-decoration: none;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .language-btn {
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            margin: 0.5rem;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .language-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .language-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255,255,255,0.3);
+        }
+
+        /* Feature Icons */
+        .feature-icon {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 1rem;
+            background: var(--secondary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: var(--transition-smooth);
+        }
+
+        .dashboard-card:hover .feature-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 1.5rem;
+                margin: 1rem 0;
+            }
+            
+            .dashboard-card {
+                padding: 1.5rem;
+                margin: 0.5rem 0;
+            }
+            
+            .language-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding: 0 1rem;
+            }
+            
+            .hero-section h1 {
+                font-size: 1.8rem;
+            }
+            
+            .hero-section .lead {
+                font-size: 1rem;
+            }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles for accessibility */
+        .language-btn:focus,
+        .dashboard-card:focus {
+            outline: 2px solid white;
+            outline-offset: 2px;
+        }
+
+        /* Error/Success Messages */
+        .alert-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 300px;
+            display: none;
+        }
+
+        /* Animation Classes */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bounce-in {
+            animation: bounceIn 0.6s ease-out;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div class="alert-message" id="alertMessage"></div>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-xl-8">
+                <!-- Language Selection -->
+                <div class="text-center mt-4 mb-3">
+                    <div class="language-btn active" onclick="switchLanguage('en')" role="button" tabindex="0" aria-label="Switch to English">
+                        <i class="fas fa-globe"></i> English
+                    </div>
+                    <div class="language-btn" onclick="switchLanguage('ar')" role="button" tabindex="0" aria-label="Switch to Arabic">
+                        <i class="fas fa-globe"></i> العربية
+                    </div>
+                </div>
+
+                <!-- Hero Section -->
+                <div class="hero-section text-center fade-in">
+                    <h1 class="display-4 mb-4">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="en-text">Deerfields Mall Gamification System</span>
+                        <span class="ar-text" style="display: none;">نظام تحفيز مول ديرفيلدز</span>
+                    </h1>
+                    <p class="lead mb-4">
+                        <span class="en-text">Experience the future of shopping with our AI-powered rewards system</span>
+                        <span class="ar-text" style="display: none;">اختبر مستقبل التسوق مع نظام المكافآت المدعوم بالذكاء الاصطناعي</span>
+                    </p>
+                    <div class="row g-4">
+                        <div class="col-6 col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-coins feature-icon"></i>
+                                <h5 class="en-text">Earn Coins</h5>
+                                <h5 class="ar-text" style="display: none;">اكسب العملات</h5>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-trophy feature-icon"></i>
+                                <h5 class="en-text">Complete Missions</h5>
+                                <h5 class="ar-text" style="display: none;">أكمل المهام</h5>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-gift feature-icon"></i>
+                                <h5 class="en-text">Redeem Rewards</h5>
+                                <h5 class="ar-text" style="display: none;">استبدل المكافآت</h5>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-star feature-icon"></i>
+                                <h5 class="en-text">Level Up</h5>
+                                <h5 class="ar-text" style="display: none;">ارتقِ بالمستوى</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Access -->
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <a href="/player/user123" class="dashboard-card bounce-in" role="button" tabindex="0" aria-label="Access Player Dashboard">
+                            <div class="text-center">
+                                <i class="fas fa-user feature-icon text-primary"></i>
+                                <h4 class="en-text">Player Dashboard</h4>
+                                <h4 class="ar-text" style="display: none;">لوحة اللاعب</h4>
+                                <p class="text-muted en-text">Access your rewards, missions, and progress</p>
+                                <p class="text-muted ar-text" style="display: none;">الوصول إلى مكافآتك ومهامك وتقدمك</p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="/admin" class="dashboard-card bounce-in" role="button" tabindex="0" aria-label="Access Admin Dashboard">
+                            <div class="text-center">
+                                <i class="fas fa-crown feature-icon text-warning"></i>
+                                <h4 class="en-text">Admin Dashboard</h4>
+                                <h4 class="ar-text" style="display: none;">لوحة الإدارة</h4>
+                                <p class="text-muted en-text">System management and analytics</p>
+                                <p class="text-muted ar-text" style="display: none;">إدارة النظام والتحليلات</p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="/shopkeeper/store1" class="dashboard-card bounce-in" role="button" tabindex="0" aria-label="Access Shopkeeper Dashboard">
+                            <div class="text-center">
+                                <i class="fas fa-store feature-icon text-success"></i>
+                                <h4 class="en-text">Shopkeeper Dashboard</h4>
+                                <h4 class="ar-text" style="display: none;">لوحة البائع</h4>
+                                <p class="text-muted en-text">Store management and customer insights</p>
+                                <p class="text-muted ar-text" style="display: none;">إدارة المتجر ورؤى العملاء</p>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="/customer-service" class="dashboard-card bounce-in" role="button" tabindex="0" aria-label="Access Customer Service Dashboard">
+                            <div class="text-center">
+                                <i class="fas fa-headset feature-icon text-info"></i>
+                                <h4 class="en-text">Customer Service</h4>
+                                <h4 class="ar-text" style="display: none;">خدمة العملاء</h4>
+                                <p class="text-muted en-text">Support ticket management</p>
+                                <p class="text-muted ar-text" style="display: none;">إدارة تذاكر الدعم</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Features Section -->
+                <div class="hero-section mt-4 fade-in">
+                    <h3 class="mb-4 en-text">System Features</h3>
+                    <h3 class="mb-4 ar-text" style="display: none;">ميزات النظام</h3>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="fas fa-language feature-icon"></i>
+                                <h6 class="en-text">Multilingual Support</h6>
+                                <h6 class="ar-text" style="display: none;">دعم متعدد اللغات</h6>
+                                <small class="en-text">English & Arabic</small>
+                                <small class="ar-text" style="display: none;">الإنجليزية والعربية</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="fas fa-wifi feature-icon"></i>
+                                <h6 class="en-text">Mall-Only Access</h6>
+                                <h6 class="ar-text" style="display: none;">الوصول داخل المول فقط</h6>
+                                <small class="en-text">Deerfields Wi-Fi Required</small>
+                                <small class="ar-text" style="display: none;">يتطلب واي فاي ديرفيلدز</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <i class="fas fa-robot feature-icon"></i>
+                                <h6 class="en-text">AI-Powered</h6>
+                                <h6 class="ar-text" style="display: none;">مدعوم بالذكاء الاصطناعي</h6>
+                                <small class="en-text">Smart Mission Generation</small>
+                                <small class="ar-text" style="display: none;">توليد ذكي للمهام</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.3.2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let currentLanguage = 'en';
+        let isLoading = false;
+
+        // Utility functions
+        function showLoading() {
+            isLoading = true;
+            document.getElementById('loadingOverlay').style.display = 'block';
+        }
+
+        function hideLoading() {
+            isLoading = false;
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.getElementById('alertMessage');
+            alertDiv.className = `alert alert-${type} alert-message`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" onclick="hideAlert()"></button>
+            `;
+            alertDiv.style.display = 'block';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(hideAlert, 5000);
+        }
+
+        function hideAlert() {
+            document.getElementById('alertMessage').style.display = 'none';
+        }
+
+        // Language switching with enhanced functionality
+        async function switchLanguage(lang) {
+            if (isLoading || currentLanguage === lang) return;
+            
+            try {
+                showLoading();
+                
+                // Update active button
+                document.querySelectorAll('.language-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+                
+                // Update current language
+                currentLanguage = lang;
+                
+                // Update document direction
+                document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+                document.documentElement.lang = lang;
+                
+                // Toggle text visibility
+                const enTexts = document.querySelectorAll('.en-text');
+                const arTexts = document.querySelectorAll('.ar-text');
+                
+                if (lang === 'ar') {
+                    enTexts.forEach(el => el.style.display = 'none');
+                    arTexts.forEach(el => el.style.display = 'block');
+                } else {
+                    enTexts.forEach(el => el.style.display = 'block');
+                    arTexts.forEach(el => el.style.display = 'none');
+                }
+                
+                // Call API to update user preference
+                const response = await fetch(`/switch-language/${lang}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to update language preference');
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showAlert(`Language switched to ${lang === 'ar' ? 'Arabic' : 'English'}`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('Language switch error:', error);
+                showAlert('Failed to switch language. Please try again.', 'error');
+                
+                // Revert changes on error
+                currentLanguage = currentLanguage === 'en' ? 'ar' : 'en';
+                document.documentElement.dir = currentLanguage === 'ar' ? 'rtl' : 'ltr';
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Enhanced dashboard card interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add keyboard navigation support
+            const dashboardCards = document.querySelectorAll('.dashboard-card');
+            
+            dashboardCards.forEach(card => {
+                card.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        window.location.href = this.href;
+                    }
+                });
+                
+                // Add hover sound effect (optional)
+                card.addEventListener('mouseenter', function() {
+                    // Could add subtle sound effect here
+                    this.style.transform = 'translateY(-8px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Add intersection observer for animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                    }
+                });
+            }, observerOptions);
+
+            // Observe all cards and sections
+            document.querySelectorAll('.dashboard-card, .hero-section').forEach(el => {
+                observer.observe(el);
+            });
+
+            // Performance monitoring
+            if ('performance' in window) {
+                window.addEventListener('load', () => {
+                    const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                    console.log(`Page load time: ${loadTime}ms`);
+                    
+                    if (loadTime > 3000) {
+                        console.warn('Page load time is slow. Consider optimizing assets.');
+                    }
+                });
+            }
+
+            // Service Worker registration (for PWA features)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered successfully');
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            }
+        });
+
+        // Error handling for network issues
+        window.addEventListener('online', () => {
+            showAlert('Connection restored!', 'success');
+        });
+
+        window.addEventListener('offline', () => {
+            showAlert('You are offline. Some features may not work.', 'warning');
+        });
+
+        // Prevent form submission on Enter key for language buttons
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.classList.contains('language-btn')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html> 
