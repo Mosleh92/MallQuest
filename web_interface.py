@@ -4,6 +4,8 @@ from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
+from werkzeug.security import check_password_hash
+from database import db
 import json
 import logging
 from datetime import datetime
@@ -54,14 +56,21 @@ def login():
     if not user_id or not password:
         return jsonify({'error': 'User ID and password are required'}), 400
     
-    # Get user
+    # Get user credentials from database
+    user_record = db.get_user(user_id)
+    if not user_record:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Verify password against stored hash
+    stored_hash = user_record.get('password_hash')
+    if not stored_hash or not check_password_hash(stored_hash, password):
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    # Ensure user exists in mall system
     user = mall_system.get_user(user_id)
     if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    # Verify password (simplified for demo - in production use proper password hashing)
-    if password != "demo123":  # Replace with proper password verification
-        return jsonify({'error': 'Invalid credentials'}), 401
+        user = User(user_id)
+        mall_system.users[user_id] = user
     
     # Check if MFA is enabled for this user
     mfa_settings = secure_db.get_mfa_settings(user_id)

@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any, Tuple
 import logging
 import uuid
 from pathlib import Path
+from werkzeug.security import generate_password_hash
 
 class MallDatabase:
     """Enhanced database manager for mall gamification system"""
@@ -42,6 +43,7 @@ class MallDatabase:
                     name TEXT NOT NULL,
                     email TEXT UNIQUE,
                     phone TEXT,
+                    password_hash TEXT,
                     coins INTEGER DEFAULT 0,
                     xp INTEGER DEFAULT 0,
                     level INTEGER DEFAULT 1,
@@ -595,6 +597,11 @@ class MallDatabase:
                         ALTER TABLE missions ADD COLUMN difficulty TEXT DEFAULT 'normal';
                         ALTER TABLE missions ADD COLUMN personalized BOOLEAN DEFAULT FALSE;
                     '''
+                },
+                {
+                    'version': '1.6.0',
+                    'description': 'Add password_hash column to users table',
+                    'sql': "ALTER TABLE users ADD COLUMN password_hash TEXT"
                 }
             ]
             
@@ -617,9 +624,24 @@ class MallDatabase:
                         VALUES (?, ?, ?)
                     ''', (str(uuid.uuid4()), migration['version'], migration['description']))
                     self.conn.commit()
-                    
+
                     self.logger.info(f"Migration {migration['version']} applied successfully")
-            
+
+            # Seed password hashes for users without one
+            try:
+                cursor = self.conn.execute(
+                    "SELECT user_id FROM users WHERE password_hash IS NULL OR password_hash = ''"
+                )
+                default_hash = generate_password_hash('demo123')
+                for row in cursor.fetchall():
+                    self.conn.execute(
+                        "UPDATE users SET password_hash = ? WHERE user_id = ?",
+                        (default_hash, row['user_id'])
+                    )
+                self.conn.commit()
+            except Exception as e:
+                self.logger.error(f"Error seeding password hashes: {e}")
+
             self.logger.info("All migrations completed successfully")
             
         except Exception as e:
@@ -759,15 +781,20 @@ class MallDatabase:
             # Sanitize input
             user_id = str(user_data['user_id']).strip()
             name = str(user_data['name']).strip()[:100]  # Limit length
-            
+
+            password_hash = user_data.get('password_hash')
+            if user_data.get('password') and not password_hash:
+                password_hash = generate_password_hash(str(user_data['password']))
+
             self.conn.execute('''
-                INSERT INTO users (user_id, name, email, phone, coins, xp, level, vip_tier, language)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (user_id, name, email, phone, password_hash, coins, xp, level, vip_tier, language)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 user_id,
                 name,
                 user_data.get('email'),
                 user_data.get('phone'),
+                password_hash,
                 user_data.get('coins', 0),
                 user_data.get('xp', 0),
                 user_data.get('level', 1),
