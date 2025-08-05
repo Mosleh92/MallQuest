@@ -4,6 +4,7 @@ from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
+from discounts_service import DiscountsService
 import json
 import logging
 from datetime import datetime
@@ -25,6 +26,7 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+discounts_service = DiscountsService()
 
 # -----------------------------
 # AUTHENTICATION ROUTES
@@ -238,6 +240,13 @@ def mfa_disable():
 def index():
     """Main landing page with language selection"""
     return render_template('index.html')
+
+
+@app.route('/discounts')
+def discounts():
+    """Display current mall promotions."""
+    offers = discounts_service.get_discounts()
+    return render_template('discounts.html', discounts=offers)
 
 @app.route('/player/<user_id>')
 def player_dashboard(user_id):
