@@ -4,6 +4,7 @@ from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
+from wheel_of_fortune import WheelOfFortune
 import json
 import logging
 from datetime import datetime
@@ -25,6 +26,28 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+
+# Initialize Wheel of Fortune with default prizes
+wheel = WheelOfFortune(
+    mall_system,
+    prizes={
+        "small_coins": {
+            "probability": 0.6,
+            "inventory": 100,
+            "reward": {"coins": 5},
+        },
+        "medium_coins": {
+            "probability": 0.3,
+            "inventory": 50,
+            "reward": {"coins": 20},
+        },
+        "jackpot": {
+            "probability": 0.1,
+            "inventory": 10,
+            "reward": {"coins": 100},
+        },
+    },
+)
 
 # -----------------------------
 # AUTHENTICATION ROUTES
@@ -384,6 +407,53 @@ def api_respond_ticket():
     
     mall_system.customer_service.respond_to_ticket(ticket_id, response, agent_id)
     return jsonify({'success': True})
+
+# -----------------------------
+# WHEEL OF FORTUNE ENDPOINTS
+# -----------------------------
+
+@app.route('/api/wheel/spin', methods=['POST'])
+def api_wheel_spin():
+    """Spin the wheel of fortune for the authenticated user"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_id = session['user_id']
+    result = wheel.spin(user_id)
+    if not result:
+        return jsonify({'success': False, 'error': 'No prizes available'}), 400
+
+    return jsonify({'success': True, 'result': result})
+
+
+@app.route('/api/wheel/config', methods=['GET', 'POST'])
+def api_wheel_config():
+    """Super admin configuration for wheel prizes"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    # In production, verify super-admin privileges here
+    if request.method == 'GET':
+        return jsonify({'success': True, 'prizes': wheel.get_prizes()})
+
+    data = request.get_json()
+    name = data.get('name')
+    probability = data.get('probability')
+    inventory = data.get('inventory')
+    reward = data.get('reward', {})
+
+    if not name or probability is None or inventory is None:
+        return jsonify({'error': 'Invalid prize configuration'}), 400
+
+    # Basic validation of numeric fields
+    try:
+        probability = float(probability)
+        inventory = int(inventory)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid probability or inventory'}), 400
+
+    wheel.configure_prize(name, probability, inventory, reward)
+    return jsonify({'success': True, 'prizes': wheel.get_prizes()})
 
 # -----------------------------
 # LANGUAGE SWITCHING
