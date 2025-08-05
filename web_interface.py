@@ -6,6 +6,7 @@ from security_module import SecurityManager, SecureDatabase, InputValidator, Rat
 from performance_module import PerformanceManager, record_performance_event
 import json
 import logging
+import os
 from datetime import datetime
 
 # Configure logging
@@ -13,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = 'deerfields_mall_secret_key_2024'
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
