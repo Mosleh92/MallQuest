@@ -9,6 +9,7 @@
 </head>
 <body class="p-4">
     <h1 class="mb-4">WebAR Treasure Hunt</h1>
+    <p class="text-muted">Attempts remaining today: <span id="remaining">{{ remaining_attempts }}</span></p>
     <div id="result" class="mb-3"></div>
     <button id="start" class="btn btn-primary">Find Treasure</button>
     <script>
@@ -16,8 +17,16 @@
         const res = await fetch('/webar/treasure-hunt', {method: 'POST'});
         const data = await res.json();
         const resultDiv = document.getElementById('result');
+        const remainingSpan = document.getElementById('remaining');
+        if (typeof data.remaining !== 'undefined') {
+            remainingSpan.textContent = data.remaining;
+        }
         if (data.status === 'success') {
             resultDiv.textContent = `You earned ${data.coins} coins!`;
+            if (data.sound && data.sound.sound) {
+                // Attempt to play sound; ignore errors if file missing
+                try { new Audio(`/static/sounds/${data.sound.sound}.mp3`).play(); } catch (err) {}
+            }
         } else if (data.status === 'limit_reached') {
             resultDiv.textContent = 'Daily limit reached';
         } else {

@@ -1270,6 +1270,10 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
+ uias29-codex/create-webar-treasure-hunt-module
+
+        # Initialize sample flash event zone and event
+=======
  codex/add-flash_events-management-and-interface
 
 =======
@@ -1279,6 +1283,7 @@ class MallGamificationSystem:
  codex/create-coin-duel-game-logic
         # Demo flash event configuration
 =======
+ main
  main
  main
  main
@@ -1355,6 +1360,9 @@ class MallGamificationSystem:
             'reward': reward
         })
         return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
+ uias29-codex/create-webar-treasure-hunt-module
+
+=======
  codex/implement-realtime-leaderboard-service
     
  codex/add-flash_events-management-and-interface
@@ -1366,6 +1374,7 @@ class MallGamificationSystem:
     def spin_wheel(self, user_id: str):
         """Expose wheel of fortune spin for users."""
         return self.wheel_of_fortune.spin(user_id)
+ main
  main
  main
  main
@@ -1808,6 +1817,8 @@ class MallGamificationSystem:
             "visited_categories": user.visited_categories,
             "purchase_history": user.purchase_history[-10:],  # Last 10 purchases
             "webar_available": self.webar_available,
+            "webar_attempts": self.webar_treasure_hunt.get_remaining_attempts(user_id)
+            if self.webar_available else 0,
         }
     
     def get_team_leaderboard_position(self, team_id: str) -> int:
