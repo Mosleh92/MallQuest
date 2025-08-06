@@ -21,6 +21,9 @@ from security_module import (
     log_security_event,
 )
 from performance_module import PerformanceManager, record_performance_event
+ codex/add-discounts-service-and-route
+from discounts_service import DiscountsService
+=======
  codex/implement-wheel-of-fortune-features
 from wheel_of_fortune import WheelOfFortune
 =======
@@ -47,6 +50,7 @@ from i18n import translator, get_locale
  codex/refactor-for-tenant-database-schemas
 from config import BaseConfig
 =======
+ main
  main
  main
  main
@@ -124,6 +128,9 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+ codex/add-discounts-service-and-route
+discounts_service = DiscountsService()
+=======
 leaderboard_service = LeaderboardService(mall_system)
  s1jkhp-codex/add-localization-framework-to-web_interface.py
 =======
@@ -183,6 +190,7 @@ def inject_tenant():
         'tenant_name': tenant.get('name', BaseConfig.MALL_NAME),
         'tenant_theme': tenant.get('theme', 'default')
     }
+ main
 
 # -----------------------------
 # AUTHENTICATION ROUTES
@@ -634,7 +642,18 @@ def index():
  main
 
 
+ codex/add-discounts-service-and-route
+
+@app.route('/discounts')
+def discounts():
+    """Display current mall promotions."""
+    offers = discounts_service.get_discounts()
+    return render_template('discounts.html', discounts=offers)
+
+@app.route('/player/<user_id>')
+=======
 @app.route("/player/<user_id>")
+ main
 def player_dashboard(user_id):
  codex/create-coin-duel-game-logic
     """Player dashboard showing active duels."""
