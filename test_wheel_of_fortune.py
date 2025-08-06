@@ -1,4 +1,5 @@
 import random
+import logging
 
 from wheel_of_fortune import WheelOfFortune
 
@@ -27,3 +28,13 @@ def test_wheel_spin_awards_coins():
     assert mall.users['tester'].coins == 5
     assert wheel.prizes['Five Coins']['inventory'] == 0
     assert wheel.get_audit_log()
+
+
+def test_wheel_spin_logs_event(caplog):
+    mall = DummyMall()
+    wheel = WheelOfFortune(mall)
+    wheel.configure_prize('Five Coins', 1.0, 1, 'coins', 5)
+    random.seed(0)
+    with caplog.at_level(logging.INFO):
+        wheel.spin('tester')
+    assert any('[WheelOfFortune] spin' in record.getMessage() for record in caplog.records)
