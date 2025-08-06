@@ -1268,7 +1268,8 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
- codex/add-flash_events.py-for-time-bound-events
+
+        # Initialize sample flash event zone and event
         self.flash_event_admin.define_zone("center_court", (0.0, 0.0), 50.0)
         self.flash_event_admin.schedule_event(
             "Weekend Blast",
@@ -1341,8 +1342,7 @@ class MallGamificationSystem:
             'reward': reward
         })
         return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
-    
- main
+
     def create_user(self, user_id: str, language: str = "en") -> User:
         """Create a new user with smart caching"""
         if SMART_CACHE_AVAILABLE:
@@ -1782,6 +1782,8 @@ class MallGamificationSystem:
             "visited_categories": user.visited_categories,
             "purchase_history": user.purchase_history[-10:],  # Last 10 purchases
             "webar_available": self.webar_available,
+            "webar_attempts": self.webar_treasure_hunt.get_remaining_attempts(user_id)
+            if self.webar_available else 0,
         }
     
     def get_team_leaderboard_position(self, team_id: str) -> int:
