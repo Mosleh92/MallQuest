@@ -288,9 +288,23 @@ def customer_service_dashboard():
     # Check authentication
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     dashboard_data = mall_system.get_customer_service_dashboard()
     return render_template('customer_service_dashboard.html', dashboard=dashboard_data)
+
+
+@app.route('/webar/treasure-hunt', methods=['GET', 'POST'])
+def webar_treasure_hunt():
+    """WebAR Treasure Hunt interaction"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    if request.method == 'GET':
+        return render_template('webar_treasure_hunt.html', user_id=user_id)
+
+    result = mall_system.participate_treasure_hunt(user_id)
+    return jsonify(result)
 
 # -----------------------------
 # API ENDPOINTS

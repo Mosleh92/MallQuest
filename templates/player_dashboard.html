@@ -571,9 +571,22 @@
 
                 <!-- Right Column -->
                 <div class="col-lg-4">
+                    {% if dashboard.webar_available %}
+                    <!-- AR Treasure Hunt -->
+                    <div class="dashboard-card bounce-in mb-4">
+                        <h5><i class="fas fa-cube"></i>
+                            <span class="en-text">AR Treasure Hunt</span>
+                            <span class="ar-text" style="display: none;">لعبة البحث عن الكنز بالواقع المعزز</span>
+                        </h5>
+                        <a href="{{ url_for('webar_treasure_hunt') }}" class="btn btn-primary w-100">
+                            <span class="en-text">Start Hunt</span>
+                            <span class="ar-text" style="display: none;">ابدأ</span>
+                        </a>
+                    </div>
+                    {% endif %}
                     <!-- User Stats -->
                     <div class="dashboard-card bounce-in">
-                        <h5><i class="fas fa-chart-bar"></i> 
+                        <h5><i class="fas fa-chart-bar"></i>
                             <span class="en-text">Statistics</span>
                             <span class="ar-text" style="display: none;">الإحصائيات</span>
                         </h5>
