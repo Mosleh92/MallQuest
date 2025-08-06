@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Reward Wheel</h1>
+<div id="wheel" class="wheel"></div>
+<div id="reward" class="mt-3"></div>
+<form id="spin-form" method="post" action="{{ url_for('spin_wheel') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" id="spin-btn">Spin</button>
+</form>
+
+<style>
+#wheel {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 5px solid #333;
+    margin: 20px auto;
+}
+.spinning {
+    animation: spin 1s ease-out;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(1440deg); }
+}
+</style>
+
+<script>
+const form = document.getElementById('spin-form');
+form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const wheel = document.getElementById('wheel');
+    wheel.classList.add('spinning');
+    const csrfToken = form.querySelector('[name=csrf_token]').value;
+    try {
+        const res = await fetch(form.action, {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrfToken},
+        });
+        const data = await res.json();
+        setTimeout(() => {
+            wheel.classList.remove('spinning');
+            document.getElementById('reward').textContent = data.reward || data.error;
+        }, 1000);
+    } catch (err) {
+        wheel.classList.remove('spinning');
+        document.getElementById('reward').textContent = 'Error spinning wheel';
+    }
+});
+</script>
+{% endblock %}
