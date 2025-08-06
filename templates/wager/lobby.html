@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Wager Lobby</h1>
+<ul>
+    {% for match in matches %}
+    <li>
+        <strong>{{ match.name }}</strong> - Stake: {{ match.stake }}
+        <form method="post" action="{{ url_for('join_match', match_id=match.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="number" name="stake" placeholder="Your stake" required>
+            <button type="submit">Join</button>
+        </form>
+    </li>
+    {% else %}
+    <li>No matches available.</li>
+    {% endfor %}
+</ul>
+<hr>
+<h2>Create Match</h2>
+<form method="post" action="{{ url_for('create_match') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="number" name="stake" placeholder="Stake amount" required>
+    <button type="submit">Create</button>
+</form>
+{% endblock %}
