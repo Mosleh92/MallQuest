@@ -1,0 +1,9 @@
+{
+  "deerfields": {
+    "name": "Deerfields Mall",
+    "domain": "localhost",
+    "schema": "deerfields",
+    "theme": "default",
+    "logo": ""
+  }
+}
