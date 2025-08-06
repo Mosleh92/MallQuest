@@ -22,6 +22,7 @@ class User(Base):
     email = Column(String, unique=True)
     phone = Column(String)
     password_hash = Column(String)
+    role = Column(String, default="player")
     coins = Column(Integer, default=0)
     xp = Column(Integer, default=0)
     level = Column(Integer, default=1)
