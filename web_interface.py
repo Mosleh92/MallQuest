@@ -789,7 +789,7 @@ def customer_service_voucher():
     if not code:
         return jsonify({'error': 'Voucher code required'}), 400
 
-    result = voucher_system.validate_voucher(code)
+    result = voucher_system.validate_voucher(code, performed_by=session.get('user_id'))
     return jsonify(result)
 
 

@@ -8,6 +8,8 @@ from database import db
 
 @dataclass
 class Voucher:
+    """Represents a stored voucher record."""
+
     code: str
     value: float
     user_id: Optional[str]
@@ -101,10 +103,13 @@ class VoucherSystem:
         )
         row = cur.fetchone()
         if not row:
+            self._log_action(code, "redeem_failed", user_id, performed_by, "not_found")
             return {"success": False, "error": "Voucher not found"}
         if row["status"] == "redeemed":
+            self._log_action(code, "redeem_failed", user_id, performed_by, "already_redeemed")
             return {"success": False, "error": "Voucher already redeemed"}
         if row["expires_at"] and datetime.fromisoformat(row["expires_at"]) < datetime.utcnow():
+            self._log_action(code, "redeem_failed", user_id, performed_by, "expired")
             return {"success": False, "error": "Voucher expired"}
 
         redeemed_at = datetime.utcnow()
@@ -124,17 +129,19 @@ class VoucherSystem:
         row = cur.fetchone()
         return dict(row) if row else None
 
-    def validate_voucher(self, code: str) -> Dict[str, any]:
+    def validate_voucher(self, code: str, performed_by: Optional[str] = None) -> Dict[str, any]:
         """Check if a voucher is valid for redemption"""
         voucher = self.get_voucher(code)
         if not voucher:
-            self._log_action(code, "lookup_failed")
+            self._log_action(code, "lookup_failed", performed_by=performed_by)
             return {"valid": False, "reason": "Voucher not found"}
         if voucher["status"] == "redeemed":
+            self._log_action(code, "lookup_failed", performed_by=performed_by, details="redeemed")
             return {"valid": False, "reason": "Voucher already redeemed"}
         if voucher["expires_at"] and datetime.fromisoformat(voucher["expires_at"]) < datetime.utcnow():
+            self._log_action(code, "lookup_failed", performed_by=performed_by, details="expired")
             return {"valid": False, "reason": "Voucher expired"}
-        self._log_action(code, "lookup_success")
+        self._log_action(code, "lookup_success", performed_by=performed_by)
         return {"valid": True, "value": voucher["value"]}
 
     def list_vouchers(self, status: Optional[str] = None) -> List[Dict[str, any]]:
