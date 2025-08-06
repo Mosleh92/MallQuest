@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voucher Audit Logs</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-4">
+    <h1 class="mb-4">Voucher Audit Logs</h1>
+    <table class="table table-bordered" id="auditTable">
+        <thead>
+        <tr><th>Code</th><th>Action</th><th>User</th><th>By</th><th>Details</th><th>Timestamp</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+<script>
+async function loadLogs(){
+    const res = await fetch('/admin/voucher_audit?format=json');
+    const data = await res.json();
+    const tbody = document.querySelector('#auditTable tbody');
+    tbody.innerHTML = '';
+    data.logs.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${log.voucher_code}</td><td>${log.action}</td><td>${log.user_id || ''}</td><td>${log.performed_by || ''}</td><td>${log.details || ''}</td><td>${log.timestamp}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+loadLogs();
+</script>
+</body>
+</html>

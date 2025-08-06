@@ -688,7 +688,13 @@ def admin_vouchers():
 
     if request.method == 'GET':
         vouchers = voucher_system.list_vouchers()
-        return jsonify({'vouchers': vouchers})
+        # Serve JSON when explicitly requested, otherwise render HTML page
+        if request.args.get('format') == 'json' or (
+            request.accept_mimetypes.accept_json
+            and not request.accept_mimetypes.accept_html
+        ):
+            return jsonify({'vouchers': vouchers})
+        return render_template('admin_vouchers.html')
 
     data = request.get_json() if request.is_json else request.form
     try:
@@ -723,7 +729,12 @@ def admin_voucher_audit():
     if 'user_id' not in session:
         return jsonify({'error': 'Authentication required'}), 401
     logs = voucher_system.get_audit_logs()
-    return jsonify({'logs': logs})
+    if request.args.get('format') == 'json' or (
+        request.accept_mimetypes.accept_json
+        and not request.accept_mimetypes.accept_html
+    ):
+        return jsonify({'logs': logs})
+    return render_template('voucher_audit.html')
 
 # -----------------------------
 # WHEEL OF FORTUNE ADMIN ENDPOINTS

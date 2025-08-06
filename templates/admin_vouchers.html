@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voucher Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-4">
+    <h1 class="mb-4">Voucher Management</h1>
+    <form id="issueForm" class="row g-3 mb-4">
+        <div class="col-md-3">
+            <input type="number" step="0.01" class="form-control" id="value" placeholder="Value" required>
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control" id="user_id" placeholder="User ID">
+        </div>
+        <div class="col-md-3">
+            <input type="number" class="form-control" id="expires" placeholder="Expires in days">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">Issue</button>
+        </div>
+    </form>
+    <div id="codeResult" class="mb-3"></div>
+    <table class="table table-bordered" id="voucherTable">
+        <thead>
+        <tr><th>Code</th><th>Value</th><th>User</th><th>Status</th><th>Expires</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+<script>
+async function loadVouchers(){
+    const res = await fetch('/admin/vouchers?format=json');
+    const data = await res.json();
+    const tbody = document.querySelector('#voucherTable tbody');
+    tbody.innerHTML = '';
+    data.vouchers.forEach(v => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${v.code}</td><td>${v.value}</td><td>${v.user_id || ''}</td><td>${v.status}</td><td>${v.expires_at || ''}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+document.getElementById('issueForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const payload = {
+        value: parseFloat(document.getElementById('value').value),
+        user_id: document.getElementById('user_id').value || null,
+        expires_in_days: document.getElementById('expires').value || null
+    };
+    const res = await fetch('/admin/vouchers', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const resultDiv = document.getElementById('codeResult');
+    if (data.code){
+        resultDiv.innerHTML = `<div class="alert alert-success">Voucher issued: ${data.code}</div>`;
+        loadVouchers();
+    } else {
+        resultDiv.innerHTML = `<div class="alert alert-danger">${data.error || 'Error issuing voucher'}</div>`;
+    }
+});
+
+loadVouchers();
+</script>
+</body>
+</html>
