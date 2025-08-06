@@ -20,7 +20,7 @@ except ImportError:
 import json
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 import logging
 try:
@@ -1012,7 +1012,7 @@ class GraphicsEngine:
         }
 
         self.sound_system[sound_file] = sound_config
- codex/add-audio-library-and-update-sound-methods
+        # codex/add-audio-library-and-update-sound-methods
 
         # Trigger sound effect using audio library
         success = self._trigger_sound_effect(sound_file, volume=volume, loop=loop)
@@ -1025,14 +1025,12 @@ class GraphicsEngine:
             status = "error"
 
         return {"status": status, "sound": sound_config}
-=======
-        
-        # Trigger sound effect
-        self._trigger_sound_effect(sound_file)
-        
-        logger.info(f"[3D GRAPHICS] Sound played: {sound_file}")
-        return {"status": "success", "sound": sound_config}
- main
+
+        # The following legacy block is kept for reference but is not executed
+        # self._trigger_sound_effect(sound_file)
+        # logger.info(f"[3D GRAPHICS] Sound played: {sound_file}")
+        # return {"status": "success", "sound": sound_config}
+        # main
     
     def create_daily_quest(self, title: str, reward: int = 15):
         """Create daily quest with specific reward"""
@@ -1063,7 +1061,23 @@ class GraphicsEngine:
         
         logger.info(f"[3D GRAPHICS] Daily quest created: {title} ({reward} coins)")
         return {"status": "success", "quest_id": quest_id, "quest": quest_config}
-    
+
+    def create_metagross_belt_quest(self, reward: int = 30):
+        """Create a quest to equip Metagross with a belt accessory."""
+        quest_result = self.create_daily_quest(
+            "Equip Metagross with a mysterious belt", reward
+        )
+
+        if quest_result["status"] == "success":
+            belt_item = {
+                "name": "metagross_belt",
+                "description": "A belt sized for Metagross with a suspicious red glint.",
+                "visual_effects": ["red_glint"],
+            }
+            quest_result["quest"]["rewards"]["special_items"].append(belt_item)
+
+        return quest_result
+
     def integrate_with_brand(self, brand_name: str, feature: str):
         """Integrate with luxury brands for exclusive features"""
         brand_config = {
@@ -1216,7 +1230,7 @@ class GraphicsEngine:
             logger.error("pygame is not installed; cannot play sound: %s", sound_file)
             return False
         category = self._get_sound_category(sound_file)
- codex/add-audio-library-and-update-sound-methods
+        # codex/add-audio-library-and-update-sound-methods
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init()
@@ -1231,19 +1245,19 @@ class GraphicsEngine:
         except Exception as e:
             logger.error("Error playing sound %s: %s", sound_file, e)
         return False
-=======
-        
-        if category == "rewards":
-            logger.info(f"[3D GRAPHICS] 🔊 Playing reward sound: {sound_file}")
-        elif category == "quests":
-            logger.info(f"[3D GRAPHICS] 🎯 Playing quest sound: {sound_file}")
-        elif category == "achievements":
-            logger.info(f"[3D GRAPHICS] 🏆 Playing achievement sound: {sound_file}")
-        elif category == "brands":
-            logger.info(f"[3D GRAPHICS] 🏛️ Playing brand sound: {sound_file}")
-        else:
-            logger.info(f"[3D GRAPHICS] 🔊 Playing general sound: {sound_file}")
- main
+
+        # The following legacy logging is kept for reference but is not executed
+        # if category == "rewards":
+        #     logger.info(f"[3D GRAPHICS] 🔊 Playing reward sound: {sound_file}")
+        # elif category == "quests":
+        #     logger.info(f"[3D GRAPHICS] 🎯 Playing quest sound: {sound_file}")
+        # elif category == "achievements":
+        #     logger.info(f"[3D GRAPHICS] 🏆 Playing achievement sound: {sound_file}")
+        # elif category == "brands":
+        #     logger.info(f"[3D GRAPHICS] 🏛️ Playing brand sound: {sound_file}")
+        # else:
+        #     logger.info(f"[3D GRAPHICS] 🔊 Playing general sound: {sound_file}")
+        # main
     
     def _get_tomorrow_midnight(self) -> datetime:
         """Get tomorrow at midnight for quest expiration"""
@@ -2486,6 +2500,10 @@ def play_sound(sound_file, volume=0.8, loop=False):
 def create_daily_quest(title, reward=15):
     """Create daily quest with specific reward"""
     return graphics_controller.graphics_engine.create_daily_quest(title, reward)
+
+def create_metagross_belt_quest(reward=30):
+    """Create quest to equip Metagross with a red-glinting belt accessory."""
+    return graphics_controller.graphics_engine.create_metagross_belt_quest(reward)
 
 def integrate_with_brand(brand_name, feature):
     """Integrate with luxury brands for exclusive features"""
