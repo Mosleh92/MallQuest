@@ -28,6 +28,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+# Secret key must be provided via environment variable for session security
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 app.config['BABEL_DEFAULT_LOCALE'] = 'en'
