@@ -4,6 +4,7 @@ from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
+from voucher_system import voucher_system
 import json
 import logging
 from datetime import datetime
@@ -288,9 +289,76 @@ def customer_service_dashboard():
     # Check authentication
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     dashboard_data = mall_system.get_customer_service_dashboard()
     return render_template('customer_service_dashboard.html', dashboard=dashboard_data)
+
+
+# -----------------------------
+# VOUCHER ROUTES
+# -----------------------------
+
+@app.route('/customer-service/voucher', methods=['GET', 'POST'])
+def customer_service_voucher():
+    """Customer service voucher lookup and validation"""
+    if request.method == 'GET':
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return render_template('voucher_lookup.html')
+
+    data = request.get_json() if request.is_json else request.form
+    code = data.get('code')
+    if not code:
+        return jsonify({'error': 'Voucher code required'}), 400
+
+    result = voucher_system.validate_voucher(code)
+    return jsonify(result)
+
+
+@app.route('/admin/vouchers', methods=['GET', 'POST'])
+def admin_vouchers():
+    """Admin endpoint for listing and issuing vouchers"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if request.method == 'GET':
+        vouchers = voucher_system.list_vouchers()
+        return jsonify({'vouchers': vouchers})
+
+    data = request.get_json() if request.is_json else request.form
+    try:
+        value = float(data.get('value', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid value'}), 400
+    user_id = data.get('user_id')
+    expires_in = data.get('expires_in_days')
+    expires_in = int(expires_in) if expires_in else None
+    code = voucher_system.issue_voucher(value, user_id, expires_in, performed_by=session.get('user_id'))
+    return jsonify({'code': code})
+
+
+@app.route('/admin/vouchers/<code>/redeem', methods=['POST'])
+def admin_redeem_voucher(code):
+    """Redeem a voucher for a user"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.get_json() if request.is_json else request.form
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'User ID required'}), 400
+    result = voucher_system.redeem_voucher(code, user_id, performed_by=session.get('user_id'))
+    status = 200 if result.get('success') else 400
+    return jsonify(result), status
+
+
+@app.route('/admin/voucher_audit')
+def admin_voucher_audit():
+    """Retrieve voucher audit logs"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    logs = voucher_system.get_audit_logs()
+    return jsonify({'logs': logs})
 
 # -----------------------------
 # API ENDPOINTS
