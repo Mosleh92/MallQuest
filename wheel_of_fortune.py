@@ -1,70 +1,11 @@
- codex/implement-wheel-of-fortune-features
+"""Wheel of Fortune module with logging and audit support."""
+
 import logging
-import random
-from typing import Dict, Any
-
-
-class WheelOfFortune:
-    """Configurable wheel of fortune with audit logging."""
-
-    def __init__(self, mall_system, prizes: Dict[str, Dict[str, Any]] = None, log_file: str = 'wheel_audit.log'):
-        self.mall_system = mall_system
-        self.prizes = prizes or {}
-        self.logger = logging.getLogger('WheelOfFortune')
-        if not self.logger.handlers:
-            handler = logging.FileHandler(log_file)
-            formatter = logging.Formatter('%(asctime)s - %(message)s')
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
-
-    def configure_prize(self, name: str, probability: float, inventory: int, reward: Dict[str, Any]):
-        """Add or update a prize configuration."""
-        self.prizes[name] = {
-            'probability': probability,
-            'inventory': inventory,
-            'reward': reward,
-        }
-
-    def get_prizes(self) -> Dict[str, Dict[str, Any]]:
-        """Return current prize configuration."""
-        return self.prizes
-
-    def spin(self, user_id: str) -> Dict[str, Any]:
-        """Spin the wheel for a user, award prize, and log the event."""
-        available = [(n, d) for n, d in self.prizes.items() if d.get('inventory', 0) > 0]
-        if not available:
-            return {}
-
-        names = [name for name, _ in available]
-        weights = [data.get('probability', 0) for _, data in available]
-        chosen = random.choices(names, weights=weights, k=1)[0]
-        prize_info = self.prizes[chosen]
-        prize_info['inventory'] -= 1
-
-        reward = prize_info.get('reward', {})
-        user = self.mall_system.get_user(user_id)
-        if user:
-            coins = reward.get('coins', 0)
-            xp = reward.get('xp', 0)
-            item = reward.get('item')
-            if coins:
-                user.coins += coins
-                user.rewards.append(f"Wheel prize: +{coins} coins")
-            if xp:
-                user.add_xp(xp, 'wheel_spin')
-            if item:
-                user.inventory.append(item)
-
-        self.logger.info('user=%s prize=%s remaining=%s', user_id, chosen, prize_info['inventory'])
-
-        return {'prize': chosen, 'reward': reward, 'remaining': prize_info['inventory']}
-=======
 import random
 from datetime import datetime
-from typing import Dict, Any, Optional
-import logging
+from typing import Any, Dict, Optional
 
+import logger as logger_config  # ensure logging is configured
 
 
 logger = logging.getLogger(__name__)
@@ -75,11 +16,11 @@ class WheelOfFortune:
 
     def __init__(self, mall_system):
         self.mall_system = mall_system
-        # prize_name -> config
+        # prize_name -> configuration
         self.prizes: Dict[str, Dict[str, Any]] = {}
         self.audit_log = []
 
-    # Prize configuration
+    # Prize configuration -------------------------------------------------
     def configure_prize(
         self,
         name: str,
@@ -114,8 +55,9 @@ class WheelOfFortune:
         self._log("update", {"name": name, "probability": probability, "inventory": inventory})
         return True
 
-    # Spin mechanics
+    # Spin mechanics ------------------------------------------------------
     def spin(self, user_id: str) -> Dict[str, Any]:
+        """Spin the wheel for a user and distribute the prize."""
         available = {k: v for k, v in self.prizes.items() if v.get("inventory", 0) > 0}
         if not available:
             self._log("spin", {"user_id": user_id, "result": None, "reason": "empty"})
@@ -147,7 +89,7 @@ class WheelOfFortune:
                 user.rewards.append(f"Wheel prize: {name} +{amount} coins")
                 result["coins"] = amount
         elif cfg.get("type") == "voucher":
-            from voucher_system import voucher_system  # lazy import to avoid DB init if unused
+            from voucher_system import voucher_system  # lazy import
             value = float(cfg.get("value", 0))
             code = voucher_system.issue_voucher(value, user_id, performed_by="wheel_of_fortune")
             result.update({"code": code, "value": value})
@@ -156,7 +98,7 @@ class WheelOfFortune:
             result["info"] = cfg.get("value")
         return result
 
-    # Audit logging
+    # Audit logging -------------------------------------------------------
     def _log(self, action: str, details: Dict[str, Any]) -> None:
         entry = {"action": action, "details": details, "timestamp": datetime.utcnow()}
         self.audit_log.append(entry)
@@ -167,4 +109,4 @@ class WheelOfFortune:
 
     def list_prizes(self) -> Dict[str, Dict[str, Any]]:
         return {k: v.copy() for k, v in self.prizes.items()}
- main
+
