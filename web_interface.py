@@ -5,6 +5,7 @@ import os
 
 from database import MallDatabase
 from i18n import translator, get_locale
+from mallquest_wager.wager_routes import wager_bp
 
 REQUIRED_ENV = ["SECRET_KEY", "DATABASE_URL", "JWT_SECRET_KEY"]
 for var in REQUIRED_ENV:
@@ -24,6 +25,7 @@ if JWTManager:
     jwt = JWTManager(app)
 
 mall_db = MallDatabase()
+app.register_blueprint(wager_bp, url_prefix='/wager')
 
 @app.route('/login', methods=['POST'])
 def login():

@@ -1,0 +1,1 @@
+"""Wager package for MallQuest."""
