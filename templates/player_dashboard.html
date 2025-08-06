@@ -555,7 +555,7 @@
 
                     <!-- Recent Rewards -->
                     <div class="dashboard-card bounce-in">
-                        <h4><i class="fas fa-gift"></i> 
+                        <h4><i class="fas fa-gift"></i>
                             <span class="en-text">Recent Rewards</span>
                             <span class="ar-text" style="display: none;">المكافآت الحديثة</span>
                         </h4>
@@ -564,6 +564,28 @@
                             <div class="reward-item">
                                 <i class="fas fa-check-circle text-success"></i> {{ reward }}
                             </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Milestone Rewards -->
+                    <div class="dashboard-card bounce-in">
+                        <h4><i class="fas fa-flag-checkered"></i>
+                            <span class="en-text">Milestone Rewards</span>
+                            <span class="ar-text" style="display: none;">مكافآت الإنجاز</span>
+                        </h4>
+                        <div id="milestoneContainer">
+                            {% for milestone in milestones %}
+                            <div class="reward-item d-flex justify-content-between align-items-center">
+                                <span>{{ milestone.threshold }} XP</span>
+                                <button class="btn btn-sm btn-primary claim-milestone" data-id="{{ milestone.id }}">
+                                    <span class="en-text">Claim</span>
+                                    <span class="ar-text" style="display: none;">استلم</span>
+                                </button>
+                            </div>
+                            {% else %}
+                            <p class="text-muted en-text">No milestones available</p>
+                            <p class="text-muted ar-text" style="display: none;">لا توجد إنجازات متاحة</p>
                             {% endfor %}
                         </div>
                     </div>
@@ -691,6 +713,34 @@
         function hideAlert() {
             document.getElementById('alertMessage').style.display = 'none';
         }
+
+        // Milestone claim handler
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('claim-milestone')) {
+                const milestoneId = e.target.dataset.id;
+                try {
+                    const response = await fetch('/api/claim-milestone', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ milestone_id: milestoneId })
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        showAlert(data.message, 'success');
+                        e.target.closest('.reward-item').remove();
+                        if (data.reward && data.reward.coins) {
+                            const coinDisplay = document.getElementById('coinDisplay');
+                            const currentCoins = parseInt(coinDisplay.textContent);
+                            animateCounter(coinDisplay, currentCoins, currentCoins + data.reward.coins, 1000);
+                        }
+                    } else {
+                        showAlert(data.error || 'Failed to claim milestone', 'error');
+                    }
+                } catch (error) {
+                    showAlert('Failed to claim milestone', 'error');
+                }
+            }
+        });
 
         // Form validation
         function validateForm() {
