@@ -670,6 +670,55 @@ def admin_voucher_audit():
     return jsonify({'logs': logs})
 
 # -----------------------------
+# WHEEL OF FORTUNE ADMIN ENDPOINTS
+# -----------------------------
+
+@app.route('/admin/wheel', methods=['GET', 'POST'])
+def admin_wheel_config():
+    """List or modify wheel of fortune prizes."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    wheel = mall_system.wheel_of_fortune
+    if request.method == 'GET':
+        return jsonify({'prizes': wheel.list_prizes()})
+
+    data = request.get_json() if request.is_json else request.form
+    name = data.get('name')
+    if not name:
+        return jsonify({'error': 'Prize name required'}), 400
+
+    probability = data.get('probability')
+    inventory = data.get('inventory')
+    prize_type = data.get('type') or 'coins'
+    value = data.get('value', 0)
+
+    if name in wheel.prizes:
+        wheel.update_prize(
+            name,
+            float(probability) if probability is not None else None,
+            int(inventory) if inventory is not None else None,
+        )
+    else:
+        if probability is None or inventory is None:
+            return jsonify({'error': 'Probability and inventory required'}), 400
+        wheel.configure_prize(
+            name,
+            float(probability),
+            int(inventory),
+            prize_type,
+            float(value),
+        )
+    return jsonify({'prizes': wheel.list_prizes()})
+
+
+@app.route('/admin/wheel/audit')
+def admin_wheel_audit():
+    """Retrieve wheel of fortune audit logs."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    return jsonify({'logs': mall_system.wheel_of_fortune.get_audit_log()})
+
+# -----------------------------
 # COIN DUEL ENDPOINTS
 # -----------------------------
 
@@ -728,6 +777,22 @@ def duel_status(duel_id):
         return jsonify({'error': 'Duel not found'}), 404
     return jsonify(duel)
 
+ q7l2bc-codex/implement-wheel-of-fortune-features
+# -----------------------------
+# WHEEL OF FORTUNE SPIN
+# -----------------------------
+
+@app.route('/wheel/spin', methods=['POST'])
+def wheel_spin():
+    """Spin the wheel of fortune for the authenticated user."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    result = mall_system.spin_wheel(session['user_id'])
+    return jsonify(result)
+
+main
+=======
+ main
 # -----------------------------
 # API ENDPOINTS
 # -----------------------------
