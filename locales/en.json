@@ -32,5 +32,22 @@
   "failed_to_disable_mfa": "Failed to disable MFA",
   "rate_limit_exceeded": "Rate limit exceeded",
   "user_and_amount_required": "User ID and amount are required",
-  "invalid_amount": "Invalid amount"
+  "invalid_amount": "Invalid amount",
+  "invalid_email_format": "Invalid email format",
+  "invalid_admin_credentials": "Invalid admin credentials",
+  "invalid_shop_id": "Invalid shop ID",
+  "invalid_store_name": "Invalid store name",
+  "invalid_input_data": "Invalid input data",
+  "processing_failed": "Processing failed",
+  "invalid_mission_type": "Invalid mission type",
+  "invalid_receipt_id": "Invalid receipt ID",
+  "invalid_ticket_data": "Invalid ticket data",
+  "invalid_response_data": "Invalid response data",
+  "no_valid_updates": "No valid updates provided",
+  "invalid_language": "Invalid language",
+  "too_many_requests": "Too many requests. Please try again later.",
+  "access_denied": "Access denied",
+  "resource_not_found": "Resource not found",
+  "internal_error": "An internal error occurred",
+  "logged_out": "Logged out"
 }

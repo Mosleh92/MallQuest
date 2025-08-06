@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="{{ session.get('lang', 'en') }}" dir="{{ 'rtl' if session.get('lang') == 'ar' else 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -178,20 +178,21 @@
     </div>
     
     <script>
-        let currentLanguage = 'en';
+        let currentLanguage = '{{ session.get("lang", "en") }}';
         let mfaRequired = false;
         let translations = {};
 
         async function loadTranslations(lang) {
             currentLanguage = lang;
             document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            document.documentElement.lang = lang;
             const response = await fetch(`/locales/${lang}.json`);
             translations = await response.json();
             updateTexts();
         }
 
         function switchLanguage(lang) {
-            loadTranslations(lang);
+            fetch(`/switch-language/${lang}`).then(() => loadTranslations(lang));
         }
 
         function updateTexts() {
@@ -275,7 +276,7 @@
             }
         });
 
-        // Initialize with English
+        // Initialize with current language
         loadTranslations(currentLanguage);
     </script>
 </body>
