@@ -49,5 +49,6 @@
   "access_denied": "تم رفض الوصول",
   "resource_not_found": "المورد غير موجود",
   "internal_error": "حدث خطأ داخلي",
-  "logged_out": "تم تسجيل الخروج"
+  "logged_out": "تم تسجيل الخروج",
+  "age_restricted": "يجب أن يكون عمر المستخدم 17 سنة على الأقل"
 }
