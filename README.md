@@ -77,11 +77,14 @@
    pip install -r requirements.txt
    ```
 
-3. **إعداد متغيرات البيئة (اختياري)**
+3. **إعداد متغيرات البيئة**
    ```bash
    cp env.example .env
+   export FLASK_SECRET_KEY=your-secret-key  # Required for session security
    # تحرير ملف .env حسب الحاجة
    ```
+
+   تأكد من تعيين متغير البيئة `FLASK_SECRET_KEY` قبل تشغيل التطبيق، فهو ضروري لحماية الجلسات.
 
 4. **تشغيل النظام**
    ```bash

@@ -21,7 +21,6 @@
 # -----------------------------
 # 1. IMPORTS AND SETUP
 # -----------------------------
-import time
 import random
 import re
 import time
@@ -30,6 +29,8 @@ from collections import defaultdict
 import json
 import hashlib
 import uuid
+from flash_events import FlashEventManager, FlashEventAdminInterface
+from wheel_of_fortune import WheelOfFortune
 
 # Import 3D Graphics Module
 try:
@@ -78,6 +79,14 @@ try:
 except ImportError:
     COMPANION_SYSTEM_AVAILABLE = False
     print("[SYSTEM] Companion System not available")
+
+# Import WebAR Treasure Hunt
+try:
+    from webar_treasure_hunt import WebARTreasureHunt
+    WEBAR_TREASURE_AVAILABLE = True
+except ImportError:
+    WEBAR_TREASURE_AVAILABLE = False
+    print("[SYSTEM] WebAR Treasure Hunt module not available")
 
 # Import Smart Cache Manager for memory management
 try:
@@ -1169,8 +1178,20 @@ class MallGamificationSystem:
         self.personalized_mission_generator = PersonalizedMissionGenerator()
         self.intelligent_reward_system = IntelligentRewardSystem()
         self.event_scheduler = EventScheduler()
+        self.flash_events = FlashEventManager()
+        self.flash_event_admin = FlashEventAdminInterface(self.flash_events)
         self.customer_service = CustomerService()
         self.abu_dhabi_features = AbuDhabiSpecialFeatures()
+        self.wheel_of_fortune = WheelOfFortune(self)
+
+        # Initialize WebAR Treasure Hunt if available
+        self.webar_available = WEBAR_TREASURE_AVAILABLE
+        if self.webar_available:
+            self.webar_treasure_hunt = WebARTreasureHunt()
+            print("[SYSTEM] WebAR Treasure Hunt initialized")
+        else:
+            self.webar_treasure_hunt = None
+            print("[SYSTEM] WebAR Treasure Hunt not available")
         
         # Initialize security and performance modules if available
         if SECURITY_PERFORMANCE_AVAILABLE:
@@ -1197,10 +1218,13 @@ class MallGamificationSystem:
         
         # Team system
         self.teams = {}
-        
+
         # Event management
         self.active_events = []
         self.team_challenges = {}
+
+        # Event logging
+        self.event_log = []
         
         # Initialize 3D Graphics if available
         self.graphics_3d_available = GRAPHICS_3D_AVAILABLE
@@ -1246,7 +1270,114 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
+ uias29-codex/create-webar-treasure-hunt-module
+
+        # Initialize sample flash event zone and event
+=======
+ codex/add-flash_events-management-and-interface
+
+=======
+ codex/implement-realtime-leaderboard-service
+        # Initialize flash events for time-bound promotions
+=======
+ codex/create-coin-duel-game-logic
+        # Demo flash event configuration
+=======
+ main
+ main
+ main
+ main
+        self.flash_event_admin.define_zone("center_court", (0.0, 0.0), 50.0)
+        self.flash_event_admin.schedule_event(
+            "Weekend Blast",
+            datetime.now() - timedelta(days=1),
+            datetime.now() + timedelta(days=1),
+            ["center_court"],
+            multiplier=1.2,
+        )
+        self.activate_events()
+
+    def activate_events(self):
+        """Update active flash events based on current time."""
+        events = self.flash_events.activate_events()
+        self.active_events = [e.name for e in events]
+        return events
+
+    def deactivate_event(self, name: str) -> None:
+        """Deactivate a flash event."""
+        self.flash_events.deactivate_event(name)
+        self.active_events = [e.name for e in self.flash_events.activate_events()]
+
+    def track_event_participation(self, user_id: str, event_name: str, progress: int = 1) -> bool:
+        """Track participant progress in a flash event."""
+        return self.flash_events.record_participation(event_name, user_id, progress)
+
+    def get_event_progress(self, user_id: str, event_name: str) -> int:
+        """Retrieve progress for a participant in a flash event."""
+        return self.flash_events.get_participant_progress(event_name, user_id)
+
+    def admin_define_zone(self, zone_id: str, coordinates: tuple, radius: float) -> None:
+        """Admin interface to define AR zones."""
+        self.flash_event_admin.define_zone(zone_id, coordinates, radius)
+
+    def admin_schedule_flash_event(
+        self,
+        name: str,
+        start: datetime,
+        end: datetime,
+        zone_ids: list,
+        multiplier: float = 1.0,
+    ) -> None:
+        """Admin interface to schedule flash events."""
+        self.flash_event_admin.schedule_event(name, start, end, zone_ids, multiplier)
+
+
+
+    def log_event(self, event_type: str, details: dict):
+        """Record system events for auditing and analytics."""
+        self.event_log.append({
+            'type': event_type,
+            'details': details,
+            'timestamp': datetime.now()
+        })
+
+    def handle_coin_duel_result(self, duel_id: str, winner_id: str, loser_id: str, scores: dict):
+        """Allocate rewards to duel winner and log the outcome."""
+        reward = 50
+        winner = self.get_user(winner_id)
+        loser = self.get_user(loser_id)
+        if winner:
+            winner.coins += reward
+            winner.update_level()
+            winner.rewards.append(f"🏆 Won coin duel against {loser_id} +{reward} coins")
+        if loser:
+            loser.rewards.append(f"🎮 Lost coin duel against {winner_id}")
+        self.log_event('coin_duel_completed', {
+            'duel_id': duel_id,
+            'winner': winner_id,
+            'loser': loser_id,
+            'scores': scores,
+            'reward': reward
+        })
+        return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
+ uias29-codex/create-webar-treasure-hunt-module
+
+=======
+ codex/implement-realtime-leaderboard-service
     
+ codex/add-flash_events-management-and-interface
+=======
+=======
+
+ codex/create-coin-duel-game-logic
+=======
+    def spin_wheel(self, user_id: str):
+        """Expose wheel of fortune spin for users."""
+        return self.wheel_of_fortune.spin(user_id)
+ main
+ main
+ main
+ main
     def create_user(self, user_id: str, language: str = "en") -> User:
         """Create a new user with smart caching"""
         if SMART_CACHE_AVAILABLE:
@@ -1444,10 +1575,17 @@ class MallGamificationSystem:
     
     def get_active_event_multiplier(self) -> float:
         """Get active event multiplier"""
-        active_events = self.event_scheduler.get_active_events()
-        if active_events:
-            return max(event.get('bonus_multiplier', 1.0) for event in active_events)
-        return 1.0
+        scheduler_events = self.event_scheduler.get_active_events()
+        flash_events = self.flash_events.activate_events()
+        multiplier = 1.0
+        if scheduler_events:
+            scheduler_mult = max(event.get('bonus_multiplier', 1.0) for event in scheduler_events)
+            multiplier = max(multiplier, scheduler_mult)
+        if flash_events:
+            flash_mult = max(event.multiplier for event in flash_events)
+            multiplier = max(multiplier, flash_mult)
+            self.active_events = [event.name for event in flash_events]
+        return multiplier
     
     def get_time_period(self) -> str:
         """Get current time period"""
@@ -1677,7 +1815,10 @@ class MallGamificationSystem:
             "friends": user.friends,
             "performance_metrics": performance_metrics,
             "visited_categories": user.visited_categories,
-            "purchase_history": user.purchase_history[-10:]  # Last 10 purchases
+            "purchase_history": user.purchase_history[-10:],  # Last 10 purchases
+            "webar_available": self.webar_available,
+            "webar_attempts": self.webar_treasure_hunt.get_remaining_attempts(user_id)
+            if self.webar_available else 0,
         }
     
     def get_team_leaderboard_position(self, team_id: str) -> int:
@@ -1706,6 +1847,24 @@ class MallGamificationSystem:
             "total_coins": total_coins,
             "suspicious_receipts": suspicious_count,
             "active_events": self.event_scheduler.get_active_events(),
+            "flash_events": [
+                {
+                    "name": e.name,
+                    "start": e.start,
+                    "end": e.end,
+                    "zones": e.zones,
+                    "multiplier": e.multiplier,
+                }
+                for e in self.flash_events.activate_events()
+            ],
+            "ar_zones": {
+                zone_id: {
+                    "name": zone.name,
+                    "coordinates": zone.coordinates,
+                    "radius": zone.radius,
+                }
+                for zone_id, zone in self.flash_events.zones.items()
+            },
             "shopkeeper_stats": {
                 shop_id: {
                     "total_sales": shopkeeper.total_sales,
@@ -1842,7 +2001,37 @@ class MallGamificationSystem:
             
         except Exception as e:
             return {"status": "error", "message": f"Error generating missions: {str(e)}"}
-    
+
+    def participate_treasure_hunt(self, user_id: str):
+        """Participate in the WebAR Treasure Hunt."""
+        try:
+            if not self.webar_available:
+                return {"status": "error", "message": "WebAR Treasure Hunt not available"}
+
+            user = self.get_user(user_id)
+            if not user:
+                return {"status": "error", "message": "User not found"}
+
+            result = self.webar_treasure_hunt.participate(user_id)
+            if result.get("status") == "success":
+                coins = result.get("coins", 0)
+                user.coins += coins
+                user.rewards.append(f"AR Treasure Hunt reward: +{coins} coins")
+                mission = {
+                    "id": str(uuid.uuid4()),
+                    "type": "ar_treasure_hunt",
+                    "title": "AR Treasure Hunt",
+                    "progress": 1,
+                    "target": 1,
+                    "reward": coins,
+                    "xp_reward": int(coins * 0.5),
+                    "completed": True,
+                }
+                user.missions.append(mission)
+            return result
+        except Exception as e:
+            return {"status": "error", "message": f"Error in treasure hunt: {str(e)}"}
+
     def create_companion(self, user_id: str, companion_type: str, name: str = None):
         """Create a companion for the user"""
         try:
@@ -1983,3 +2172,7 @@ if __name__ == "__main__":
     
     print("\n=== CUSTOMER SERVICE DASHBOARD ===")
     print(json.dumps(cs_dashboard, indent=2, default=str)) 
+
+# Integration of Treasure Hunt
+from ar_treasure_hunt import TreasureHuntManager
+
