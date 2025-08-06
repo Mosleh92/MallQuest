@@ -53,8 +53,17 @@ from config import BaseConfig
 import json
  main
 import logging
+ codex/refactor-for-tenant-database-support
+from datetime import datetime
+from config import TenantManager, BaseConfig
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+=======
  main
 import os
+ main
 
 app = Flask(__name__)
  codex/create-coin-duel-game-logic
@@ -142,6 +151,38 @@ wheel = WheelOfFortune(
         },
     },
 )
+
+# Tenant-specific system caches
+tenant_systems = {}
+tenant_dbs = {}
+
+
+@app.before_request
+def load_tenant():
+    """Middleware to load tenant configuration based on request domain."""
+    host = request.host.split(':')[0]
+    tenant = TenantManager.get_tenant(host)
+    if not tenant:
+        abort(404)
+
+    g.tenant = tenant
+
+    global mall_system, secure_db
+    if host not in tenant_systems:
+        tenant_systems[host] = MallGamificationSystem()
+        tenant_dbs[host] = SecureDatabase(tenant['schema'])
+    mall_system = tenant_systems[host]
+    secure_db = tenant_dbs[host]
+
+
+@app.context_processor
+def inject_tenant():
+    """Inject tenant branding into templates."""
+    tenant = getattr(g, 'tenant', {})
+    return {
+        'tenant_name': tenant.get('name', BaseConfig.MALL_NAME),
+        'tenant_theme': tenant.get('theme', 'default')
+    }
 
 # -----------------------------
 # AUTHENTICATION ROUTES

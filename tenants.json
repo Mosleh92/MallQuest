@@ -1,9 +1,16 @@
 {
+ codex/refactor-for-tenant-database-support
+  "localhost": {
+    "schema": "mall_gamification.db",
+    "name": "Deerfields Mall",
+    "theme": "default"
+=======
   "deerfields": {
     "name": "Deerfields Mall",
     "domain": "localhost",
     "schema": "deerfields",
     "theme": "default",
     "logo": ""
+ main
   }
 }
