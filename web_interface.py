@@ -1,6 +1,7 @@
 # Web Interface for Mall Gamification AI Control Panel
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
 from flask_wtf.csrf import CSRFProtect
+from flask_babel import Babel, gettext as _
 from mall_gamification_system import MallGamificationSystem, User
 from coin_duel import CoinDuelManager
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
@@ -28,6 +29,17 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
+app.config['BABEL_DEFAULT_LOCALE'] = 'en'
+app.config['BABEL_SUPPORTED_LOCALES'] = ['en', 'ar']
+app.config['BABEL_TRANSLATION_DIRECTORIES'] = 'translations'
+
+
+def get_locale():
+    return session.get('language', 'en')
+
+
+babel = Babel(app, locale_selector=get_locale)
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
@@ -93,16 +105,28 @@ def login():
     
     # Validate input
     if not user_id or not password:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'error': _('user_id_password_required')}), 400
+=======
         return jsonify({'error': translator.gettext('user_password_required', lang)}), 400
+ main
     
     # Get user
     user = mall_system.get_user(user_id)
     if not user:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'error': _('user_not_found')}), 404
+    
+    # Verify password (simplified for demo - in production use proper password hashing)
+    if password != "demo123":  # Replace with proper password verification
+        return jsonify({'error': _('invalid_credentials')}), 401
+=======
         return jsonify({'error': translator.gettext('user_not_found', lang)}), 404
     
     # Verify password (simplified for demo - in production use proper password hashing)
     if password != "demo123":  # Replace with proper password verification
         return jsonify({'error': translator.gettext('invalid_credentials', lang)}), 401
+ main
     
     # Check if MFA is enabled for this user
     mfa_settings = secure_db.get_mfa_settings(user_id)
@@ -110,13 +134,21 @@ def login():
     if mfa_settings and mfa_settings['mfa_enabled']:
         # MFA is enabled, verify OTP
         if not otp:
+ codex/add-localization-framework-to-web_interface.py
+            return jsonify({'error': _('otp_required'), 'mfa_required': True}), 401
+=======
             return jsonify({'error': translator.gettext('otp_required', lang), 'mfa_required': True}), 401
+ main
         
         # Verify OTP
         if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
             # Log failed attempt
             secure_db.log_mfa_attempt(user_id, 'otp', False)
+ codex/add-localization-framework-to-web_interface.py
+            return jsonify({'error': _('invalid_otp'), 'mfa_required': True}), 403
+=======
             return jsonify({'error': translator.gettext('otp_invalid', lang), 'mfa_required': True}), 403
+ main
         
         # Log successful attempt
         secure_db.log_mfa_attempt(user_id, 'otp', True)
@@ -180,6 +212,17 @@ def mfa_setup():
     otp = data.get('otp')
     
     if not otp:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'error': _('otp_required')}), 400
+    
+    mfa_setup_data = session.get('mfa_setup')
+    if not mfa_setup_data:
+        return jsonify({'error': _('mfa_setup_session_expired')}), 400
+    
+    # Verify OTP
+    if not security_manager.verify_otp(mfa_setup_data['secret'], otp):
+        return jsonify({'error': _('invalid_otp')}), 403
+=======
         return jsonify({'error': translator.gettext('otp_required', lang)}), 400
     
     mfa_setup_data = session.get('mfa_setup')
@@ -189,6 +232,7 @@ def mfa_setup():
     # Verify OTP
     if not security_manager.verify_otp(mfa_setup_data['secret'], otp):
         return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
+ main
     
     # Save MFA settings
     if secure_db.save_mfa_settings(user_id, mfa_setup_data['secret'], mfa_setup_data['backup_codes']):
@@ -201,9 +245,15 @@ def mfa_setup():
         # Log security event
         secure_db.log_security_event(user_id, 'mfa_enabled', 'MFA setup completed')
         
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'success': True, 'message': _('mfa_enabled_success')})
+    else:
+        return jsonify({'error': _('failed_to_save_mfa_settings')}), 500
+=======
         return jsonify({'success': True, 'message': translator.gettext('mfa_enabled_success', lang)})
     else:
         return jsonify({'error': translator.gettext('failed_save_mfa', lang)}), 500
+ main
 
 @app.route('/mfa/verify', methods=['POST'])
 def mfa_verify():
@@ -215,12 +265,20 @@ def mfa_verify():
     backup_code = data.get('backup_code')
     
     if not user_id:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'error': _('user_id_required')}), 400
+=======
         return jsonify({'error': translator.gettext('user_id_required', lang)}), 400
+ main
     
     # Get MFA settings
     mfa_settings = secure_db.get_mfa_settings(user_id)
     if not mfa_settings or not mfa_settings['mfa_enabled']:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'error': _('mfa_not_enabled')}), 400
+=======
         return jsonify({'error': translator.gettext('mfa_not_enabled', lang)}), 400
+ main
     
     success = False
     attempt_type = None
@@ -237,23 +295,38 @@ def mfa_verify():
             secure_db.update_backup_codes(user_id, mfa_settings['backup_codes'])
         attempt_type = 'backup'
     else:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'error': _('otp_or_backup_required')}), 400
+=======
         return jsonify({'error': translator.gettext('otp_or_backup_required', lang)}), 400
+ main
     
     # Log attempt
     secure_db.log_mfa_attempt(user_id, attempt_type, success)
     
     if success:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'success': True, 'message': _('mfa_verification_success')})
+    else:
+        return jsonify({'error': _('invalid_otp')}), 403
+=======
         return jsonify({'success': True, 'message': translator.gettext('mfa_verify_success', lang)})
     else:
         return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
+ main
 
 @app.route('/mfa/disable', methods=['POST'])
 def mfa_disable():
     """Disable MFA for user"""
     lang = get_locale()
     if 'user_id' not in session:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'error': _('authentication_required')}), 401
+    
+=======
         return jsonify({'error': translator.gettext('authentication_required', lang)}), 401
 
+ main
     user_id = session['user_id']
     data = request.get_json() if request.is_json else request.form
     otp = data.get('otp')
@@ -261,6 +334,19 @@ def mfa_disable():
     # Get MFA settings
     mfa_settings = secure_db.get_mfa_settings(user_id)
     if not mfa_settings or not mfa_settings['mfa_enabled']:
+        return jsonify({'error': _('mfa_not_enabled')}), 400
+    
+    # Verify OTP before disabling
+    if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
+        return jsonify({'error': _('invalid_otp')}), 403
+    
+    # Disable MFA
+    if secure_db.disable_mfa(user_id):
+        secure_db.log_security_event(user_id, 'mfa_disabled', 'MFA disabled by user')
+        return jsonify({'success': True, 'message': _('mfa_disabled_success')})
+    else:
+        return jsonify({'error': _('failed_to_disable_mfa')}), 500
+=======
         return jsonify({'error': translator.gettext('mfa_not_enabled', lang)}), 400
 
     # Verify OTP before disabling
@@ -273,6 +359,7 @@ def mfa_disable():
         return jsonify({'success': True, 'message': translator.gettext('mfa_disabled_success', lang)})
     else:
         return jsonify({'error': translator.gettext('failed_disable_mfa', lang)}), 500
+ main
 
 # -----------------------------
 # ROUTES FOR DIFFERENT DASHBOARDS
@@ -498,7 +585,11 @@ def api_submit_receipt():
     # Check authentication
     lang = get_locale()
     if 'user_id' not in session:
+ codex/add-localization-framework-to-web_interface.py
+        return jsonify({'error': _('authentication_required')}), 401
+=======
         return jsonify({'error': translator.gettext('authentication_required', lang)}), 401
+ main
     
     # Rate limiting
     if not secure_db.check_rate_limit(request.remote_addr, 'submit_receipt', 10, 60):

@@ -12,4 +12,5 @@ Flask-WTF>=1.1.1
 pyotp>=2.9.0
 requests>=2.31.0
 bcrypt>=4.0.1
-python-dotenv>=1.0.0 
+python-dotenv>=1.0.0
+Flask-Babel>=3.1.0
