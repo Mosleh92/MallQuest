@@ -22,7 +22,7 @@
 
 ### Software Dependencies
 - **Flask**: Web framework
-- **SQLite**: Database (included with Python)
+- **PostgreSQL**: Primary database (sharded via DSN suffix)
 - **Redis**: Optional, for enhanced caching
 - **Docker**: Optional, for containerized deployment
 
@@ -53,12 +53,16 @@ nano .env
 
 ### 3. Initialize Database
 ```bash
-# Run database enhancement
-python enhance_database.py
+# Create PostgreSQL databases for each shard
+createdb mall_gamification_shard0
+# createdb mall_gamification_shard1  # repeat if SHARD_COUNT > 1
 
-# Verify database setup
-python test_database_comprehensive.py
+# Run migrations across shards
+alembic upgrade head
 ```
+Set `SHARD_COUNT` in your environment to control how many databases are
+created. The application uses a hash of `user_id` to route queries to the
+appropriate shard.
 
 ### 4. Start Application
 ```bash
@@ -91,8 +95,11 @@ echo "LOG_LEVEL=DEBUG" >> .env
 
 ### Step 2: Database Setup
 ```bash
-# Initialize development database
-python enhance_database.py
+# Create PostgreSQL databases for each shard
+createdb mall_gamification_shard0
+
+# Run migrations
+alembic upgrade head
 
 # Create test data (optional)
 python -c "
@@ -102,6 +109,9 @@ system.create_test_data()
 print('Test data created successfully')
 "
 ```
+Set the `SHARD_COUNT` environment variable before running migrations if more
+than one shard is required. The application uses a hash of `user_id` for shard
+selection.
 
 ### Step 3: Run Tests
 ```bash
@@ -185,7 +195,7 @@ REDIS_URL=redis://localhost:6379/0
 ### Step 4: Database Setup
 ```bash
 # Initialize production database
-python enhance_database.py
+alembic upgrade head
 
 # Set proper permissions
 chmod 600 prod_mall_gamification.db
@@ -431,7 +441,7 @@ save 60 10000
 ### Step 2: Database Optimization
 ```bash
 # Run database optimization
-python enhance_database.py --optimize
+alembic upgrade head
 
 # Create indexes
 python -c "
@@ -549,7 +559,7 @@ print('Database connection:', db.check_connection())
 
 # Reset database (development only)
 rm mall_gamification.db
-python enhance_database.py
+alembic upgrade head
 ```
 
 #### 3. Redis Issues
