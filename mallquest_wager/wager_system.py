@@ -13,11 +13,19 @@ _db = MallDatabase()
 
 @dataclass
 class WagerMatch:
-    """Simple in-memory representation of a wager match."""
+    """Simple in-memory representation of a wager match.
+
+    The match tracks fairness related parameters including a maximum pot size
+    and the maximum fraction a single player may contribute.  These values are
+    used by :func:`join_match` when calculating the dynamic stake for a new
+    player.
+    """
 
     match_id: str
     name: str
     stake_each: int
+    max_pot: int = 1000
+    max_player_fraction: float = 0.1  # anti-whale: max 10% of pot per player
     pot: int = 0
     members: Dict[str, str] = field(default_factory=dict)  # user_id -> squad_id
     eliminated: Set[str] = field(default_factory=set)
@@ -28,9 +36,27 @@ class WagerMatch:
 _MATCHES: Dict[str, WagerMatch] = {}
 
 
-def create_match(name: str, stake_each: int) -> WagerMatch:
-    """Create a new :class:`WagerMatch` and register it."""
-    match = WagerMatch(match_id=uuid.uuid4().hex, name=name, stake_each=stake_each)
+def create_match(name: str, stake_each: int, max_pot: int = 1000, max_player_fraction: float = 0.1) -> WagerMatch:
+    """Create and register a new :class:`WagerMatch`.
+
+    Parameters
+    ----------
+    name:
+        Friendly name of the match.
+    stake_each:
+        Base stake required from each participant before adjustments.
+    max_pot:
+        Maximum total pot size allowed for this match.
+    max_player_fraction:
+        Maximum fraction of the pot a single player may contribute.
+    """
+    match = WagerMatch(
+        match_id=uuid.uuid4().hex,
+        name=name,
+        stake_each=stake_each,
+        max_pot=max_pot,
+        max_player_fraction=max_player_fraction,
+    )
     _MATCHES[match.match_id] = match
     return match
 
@@ -38,23 +64,45 @@ def create_match(name: str, stake_each: int) -> WagerMatch:
 def join_match(user_id: str, match_id: str, squad_id: str) -> bool:
     """Join an existing match by staking coins.
 
-    Coins are deducted from the user's balance using a database transaction. The
-    deducted amount is added to the match's pot.
+    Coins are deducted from the user's balance using a database transaction and
+    added to the match's pot.  The amount deducted is **dynamically adjusted**
+    according to two rules:
+
+    1. ``match.max_pot`` caps the total size of the pot.
+    2. ``match.max_player_fraction`` ensures a single player cannot contribute
+       more than a fraction of the maximum pot (anti-whale mechanism).
+
+    The actual stake used is the minimum of the base ``stake_each``, the
+    remaining room before reaching ``max_pot`` and the player's allowed share of
+    the pot.
     """
     match = _MATCHES.get(match_id)
-    if not match or not match.active:
+    if not match or not match.active or match.pot >= match.max_pot:
         return False
 
     session = _db._session_for_key(user_id)
     try:
         user = session.get(User, user_id)
-        if not user or user.coins < match.stake_each:
+        if not user:
             session.rollback()
             return False
-        user.coins -= match.stake_each
+
+        # calculate dynamic stake
+        stake = min(
+            match.stake_each,
+            int(user.coins * match.max_player_fraction),
+            int(match.max_pot * match.max_player_fraction),
+            match.max_pot - match.pot,
+        )
+
+        if stake <= 0 or user.coins < stake:
+            session.rollback()
+            return False
+
+        user.coins -= stake
         session.commit()
         match.members[user_id] = squad_id
-        match.pot += match.stake_each
+        match.pot += stake
         return True
     except Exception:
         session.rollback()
