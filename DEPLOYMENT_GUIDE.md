@@ -385,6 +385,9 @@ MISSION_TEMPLATE_CACHE_TTL=300
 # Redis cache
 MISSION_TEMPLATE_CACHE_BACKEND=redis
 MISSION_TEMPLATE_CACHE_TTL=600
+
+# Refresh cached templates (after updates)
+python -c "from ai_mission_generator import AIMissionGenerator; AIMissionGenerator().refresh_template_cache()"
 ```
 
 ## 🔐 Security Setup

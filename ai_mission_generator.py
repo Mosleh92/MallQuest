@@ -67,6 +67,16 @@ class TemplateCache:
         else:
             self._memory[key] = (value, time.time() + self.ttl)
 
+    def delete(self, key: str) -> None:
+        """Remove a specific key from the cache."""
+        if self.backend == "redis" and self._redis:
+            try:
+                self._redis.delete(key)
+            except Exception as e:
+                print(f"Failed to delete Redis cache key {key}: {e}")
+        else:
+            self._memory.pop(key, None)
+
     def clear(self):
         if self.backend == "redis" and self._redis:
             try:
@@ -236,7 +246,9 @@ class AIMissionGenerator:
 
     def refresh_template_cache(self) -> None:
         """Clear mission template cache and reload templates"""
-        self.template_cache.clear()
+        self.template_cache.delete("mission_templates")
+        for m_type in self.mission_types:
+            self.template_cache.delete(f"templates:{m_type}")
         self.mission_templates = self._load_mission_templates()
     
     def analyze_user_patterns(self, user_id: str) -> Dict[str, Any]:
