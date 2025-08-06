@@ -5,7 +5,7 @@ Integrates comprehensive security features and performance optimizations includi
 JWT authentication, rate limiting, input validation, async processing, and caching.
 """
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, g
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import (
     SecurityManager, require_auth, SecureDatabase, RateLimiter,
@@ -13,14 +13,16 @@ from security_module import (
     get_secure_database, get_rate_limiter
 )
 from performance_module import (
-    PerformanceManager, AsyncTaskManager, CachedDatabase, 
+    PerformanceManager, AsyncTaskManager, CachedDatabase,
     PerformanceMonitor, OptimizedGraphicsEngine, record_performance_event,
     get_performance_manager, get_performance_monitor, get_optimized_graphics
 )
+from discounts_service import DiscountsService
 import time
 import asyncio
 import logging
 from datetime import datetime
+from i18n import translator, get_locale
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,12 +38,25 @@ secure_database = get_secure_database()
 rate_limiter = get_rate_limiter()
 input_validator = InputValidator()
 
+# Initialize discounts service
+discounts_service = DiscountsService()
+
 # Initialize performance systems
 performance_manager = get_performance_manager()
 performance_monitor = get_performance_monitor()
 optimized_graphics = get_optimized_graphics()
 async_task_manager = AsyncTaskManager()
 cached_database = CachedDatabase()
+
+@app.before_request
+def set_language():
+    g.lang = get_locale()
+
+
+@app.context_processor
+def inject_translations():
+    lang = getattr(g, 'lang', translator.default_locale)
+    return {'t': lambda key: translator.gettext(key, lang)}
 
 # -----------------------------
 # MAIN ROUTES
@@ -56,14 +71,23 @@ def index():
     # Record performance
     response_time = time.time() - start_time
     record_performance_event('main_page', response_time)
-    
+
     return render_template('index.html')
+
+
+@app.route('/discounts')
+@rate_limiter.limit(max_requests=30, window_seconds=60)
+def discounts():
+    """Display current mall promotions."""
+    offers = discounts_service.get_discounts()
+    return render_template('discounts.html', offers=offers)
 
 @app.route('/login', methods=['GET', 'POST'])
 @rate_limiter.limit(max_requests=5, window_seconds=300)
 def login():
     """Login endpoint with performance monitoring"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     if request.method == 'POST':
         data = request.get_json()
@@ -73,7 +97,7 @@ def login():
         password = data.get('password', '')
         
         if not email:
-            return jsonify({'error': 'Invalid email format'}), 400
+            return jsonify({'error': translator.gettext('invalid_email_format', lang)}), 400
         
         # Authenticate user
         user = mall_system.authenticate_user(email, password)
@@ -98,7 +122,7 @@ def login():
             record_performance_event('login_failed', response_time)
             log_security_event('login_failed', {'email': email, 'ip': request.remote_addr})
             
-            return jsonify({'error': 'Invalid credentials'}), 401
+            return jsonify({'error': translator.gettext('invalid_credentials', lang)}), 401
     
     return render_template('login.html')
 
@@ -107,6 +131,7 @@ def login():
 def admin_login():
     """Admin login endpoint with enhanced security"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     if request.method == 'POST':
         data = request.get_json()
@@ -116,7 +141,7 @@ def admin_login():
         password = data.get('password', '')
         
         if not email:
-            return jsonify({'error': 'Invalid email format'}), 400
+            return jsonify({'error': translator.gettext('invalid_email_format', lang)}), 400
         
         # Authenticate admin
         user = mall_system.authenticate_user(email, password)
@@ -141,7 +166,7 @@ def admin_login():
             record_performance_event('admin_login_failed', response_time)
             log_security_event('admin_login_failed', {'email': email, 'ip': request.remote_addr})
             
-            return jsonify({'error': 'Invalid admin credentials'}), 401
+            return jsonify({'error': translator.gettext('invalid_admin_credentials', lang)}), 401
     
     return render_template('admin_login.html')
 
@@ -151,12 +176,13 @@ def admin_login():
 def player_dashboard(user_id):
     """Player dashboard with caching"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     # Get user data with caching
     user_data = cached_database.get_user(user_id)
     
     if not user_data:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': translator.gettext('user_not_found', lang)}), 404
     
     # Get player stats
     player_stats = mall_system.get_player_stats(user_id)
@@ -196,10 +222,11 @@ def admin_dashboard():
 def shopkeeper_dashboard(shop_id):
     """Shopkeeper dashboard"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     # Validate shop_id
     if not input_validator.validate_string(shop_id, max_length=50):
-        return jsonify({'error': 'Invalid shop ID'}), 400
+        return jsonify({'error': translator.gettext('invalid_shop_id', lang)}), 400
     
     # Get shop data
     shop_data = mall_system.get_shop_data(shop_id)
@@ -232,6 +259,7 @@ def customer_service_dashboard():
 async def submit_receipt():
     """Receipt submission with async processing and security"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     user_id = request.current_user['user_id']
     data = request.get_json()
@@ -242,13 +270,13 @@ async def submit_receipt():
         store = input_validator.sanitize_string(data.get('store', ''), max_length=100)
         
         if amount <= 0 or amount > 10000:  # Reasonable limits
-            return jsonify({'error': 'Invalid amount'}), 400
-        
+            return jsonify({'error': translator.gettext('invalid_amount', lang)}), 400
+
         if not store:
-            return jsonify({'error': 'Invalid store name'}), 400
+            return jsonify({'error': translator.gettext('invalid_store_name', lang)}), 400
             
     except (ValueError, TypeError):
-        return jsonify({'error': 'Invalid input data'}), 400
+        return jsonify({'error': translator.gettext('invalid_input_data', lang)}), 400
     
     # Async processing
     try:
@@ -286,7 +314,7 @@ async def submit_receipt():
         
     except Exception as e:
         logger.error(f"Receipt processing error: {e}")
-        return jsonify({'error': 'Processing failed'}), 500
+        return jsonify({'error': translator.gettext('processing_failed', lang)}), 500
 
 @app.route('/api/optimized-submit-receipt', methods=['POST'])
 @require_auth()
@@ -294,6 +322,7 @@ async def submit_receipt():
 async def optimized_submit_receipt():
     """Optimized receipt submission with async processing"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     user_id = request.current_user['user_id']
     data = request.get_json()
@@ -304,13 +333,13 @@ async def optimized_submit_receipt():
         store = input_validator.validate_string(data.get('store', ''), max_length=100)
         
         if amount <= 0 or amount > 10000:  # Reasonable limits
-            return jsonify({'error': 'Invalid amount'}), 400
-        
+            return jsonify({'error': translator.gettext('invalid_amount', lang)}), 400
+
         if not store:
-            return jsonify({'error': 'Invalid store name'}), 400
+            return jsonify({'error': translator.gettext('invalid_store_name', lang)}), 400
             
     except (ValueError, TypeError):
-        return jsonify({'error': 'Invalid input data'}), 400
+        return jsonify({'error': translator.gettext('invalid_input_data', lang)}), 400
     
     # Async processing
     try:
@@ -348,7 +377,7 @@ async def optimized_submit_receipt():
         
     except Exception as e:
         logger.error(f"Receipt processing error: {e}")
-        return jsonify({'error': 'Processing failed'}), 500
+        return jsonify({'error': translator.gettext('processing_failed', lang)}), 500
 
 @app.route('/api/generate-mission', methods=['POST'])
 @require_auth()
@@ -356,6 +385,7 @@ async def optimized_submit_receipt():
 def generate_mission():
     """Generate mission with performance monitoring"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     user_id = request.current_user['user_id']
     data = request.get_json()
@@ -364,7 +394,7 @@ def generate_mission():
     mission_type = input_validator.validate_string(data.get('type', ''), max_length=50)
     
     if not mission_type:
-        return jsonify({'error': 'Invalid mission type'}), 400
+        return jsonify({'error': translator.gettext('invalid_mission_type', lang)}), 400
     
     # Generate mission
     mission = mall_system.generate_mission(user_id, mission_type)
@@ -387,15 +417,16 @@ def generate_mission():
 def remove_receipt():
     """Remove receipt with validation"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     user_id = request.current_user['user_id']
     data = request.get_json()
     
     # Input validation
     receipt_id = input_validator.validate_string(data.get('receipt_id', ''), max_length=50)
-    
+
     if not receipt_id:
-        return jsonify({'error': 'Invalid receipt ID'}), 400
+        return jsonify({'error': translator.gettext('invalid_receipt_id', lang)}), 400
     
     # Remove receipt
     result = mall_system.remove_receipt(user_id, receipt_id)
@@ -417,6 +448,7 @@ def remove_receipt():
 def create_ticket():
     """Create support ticket with validation"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     user_id = request.current_user['user_id']
     data = request.get_json()
@@ -426,7 +458,7 @@ def create_ticket():
     message = input_validator.validate_string(data.get('message', ''), max_length=1000)
     
     if not subject or not message:
-        return jsonify({'error': 'Invalid ticket data'}), 400
+        return jsonify({'error': translator.gettext('invalid_ticket_data', lang)}), 400
     
     # Create ticket
     ticket = mall_system.create_support_ticket(user_id, subject, message)
@@ -449,6 +481,7 @@ def create_ticket():
 def respond_ticket():
     """Respond to support ticket"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     agent_id = request.current_user['user_id']
     data = request.get_json()
@@ -458,7 +491,7 @@ def respond_ticket():
     response = input_validator.validate_string(data.get('response', ''), max_length=1000)
     
     if not ticket_id or not response:
-        return jsonify({'error': 'Invalid response data'}), 400
+        return jsonify({'error': translator.gettext('invalid_response_data', lang)}), 400
     
     # Respond to ticket
     result = mall_system.respond_to_ticket(ticket_id, agent_id, response)
@@ -480,6 +513,7 @@ def respond_ticket():
 def update_user():
     """Update user data with validation"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     user_id = request.current_user['user_id']
     data = request.get_json()
@@ -497,7 +531,7 @@ def update_user():
     updates = {k: v for k, v in updates.items() if v is not None}
     
     if not updates:
-        return jsonify({'error': 'No valid updates provided'}), 400
+        return jsonify({'error': translator.gettext('no_valid_updates', lang)}), 400
     
     # Update user
     result = secure_database.update_user_safe(user_id, updates)
@@ -519,6 +553,7 @@ def update_user():
 def get_user_data():
     """Get user data with caching"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     user_id = request.current_user['user_id']
     
@@ -526,7 +561,7 @@ def get_user_data():
     user_data = cached_database.get_user(user_id)
     
     if not user_data:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': translator.gettext('user_not_found', lang)}), 404
     
     # Record performance
     response_time = time.time() - start_time
@@ -564,6 +599,7 @@ def get_performance_metrics():
 def logout():
     """Logout user and clear session"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     if hasattr(request, 'current_user'):
         user_id = request.current_user.get('user_id')
@@ -574,19 +610,21 @@ def logout():
     # Record performance
     response_time = time.time() - start_time
     record_performance_event('logout', response_time)
-    
-    return jsonify({'status': 'logged_out'})
+
+    session.clear()
+    return jsonify({'status': 'success', 'message': translator.gettext('logged_out', lang)})
 
 @app.route('/switch-language/<language>')
 @rate_limiter.limit(max_requests=20, window_seconds=60)
 def switch_language(language):
     """Switch user language preference"""
     start_time = time.time()
+    lang = getattr(g, 'lang', translator.default_locale)
     
     # Validate language
     valid_languages = ['en', 'ar']
     if language not in valid_languages:
-        return jsonify({'error': 'Invalid language'}), 400
+        return jsonify({'error': translator.gettext('invalid_language', lang)}), 400
     
     # Update user language if authenticated
     if hasattr(request, 'current_user'):
@@ -595,10 +633,11 @@ def switch_language(language):
             # Update user language in database
             secure_database.update_user_safe(user_id, {'language': language})
     
+    session['lang'] = language
     # Record performance
     response_time = time.time() - start_time
     record_performance_event('language_switch', response_time)
-    
+
     return jsonify({'status': 'success', 'language': language})
 
 @app.route('/health', methods=['GET'])
@@ -619,28 +658,33 @@ def health_check():
 @app.errorhandler(404)
 def not_found(error):
     logger.warning(f"404 error: {request.url}")
-    return jsonify({'error': 'Resource not found'}), 404
+    lang = getattr(g, 'lang', translator.default_locale)
+    return jsonify({'error': translator.gettext('resource_not_found', lang)}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     logger.error(f"Internal server error: {str(error)}")
     # Don't expose internal error details to client
-    return jsonify({'error': 'An internal error occurred'}), 500
+    lang = getattr(g, 'lang', translator.default_locale)
+    return jsonify({'error': translator.gettext('internal_error', lang)}), 500
 
 @app.errorhandler(429)
 def rate_limit_exceeded(error):
     logger.warning(f"Rate limit exceeded for IP: {request.remote_addr}")
-    return jsonify({'error': 'Too many requests. Please try again later.'}), 429
+    lang = getattr(g, 'lang', translator.default_locale)
+    return jsonify({'error': translator.gettext('too_many_requests', lang)}), 429
 
 @app.errorhandler(401)
 def unauthorized(error):
     logger.warning(f"Unauthorized access attempt from IP: {request.remote_addr}")
-    return jsonify({'error': 'Authentication required'}), 401
+    lang = getattr(g, 'lang', translator.default_locale)
+    return jsonify({'error': translator.gettext('authentication_required', lang)}), 401
 
 @app.errorhandler(403)
 def forbidden(error):
     logger.warning(f"Forbidden access attempt from IP: {request.remote_addr}")
-    return jsonify({'error': 'Access denied'}), 403
+    lang = getattr(g, 'lang', translator.default_locale)
+    return jsonify({'error': translator.gettext('access_denied', lang)}), 403
 
 if __name__ == '__main__':
     # Log startup

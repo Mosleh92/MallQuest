@@ -21,15 +21,16 @@
 # -----------------------------
 # 1. IMPORTS AND SETUP
 # -----------------------------
-import time
 import random
 import re
+import time
 from datetime import datetime, timedelta
 from collections import defaultdict
 import json
 import hashlib
 import uuid
 from flash_events import FlashEventManager, FlashEventAdminInterface
+from wheel_of_fortune import WheelOfFortune
 
 # Import 3D Graphics Module
 try:
@@ -1181,6 +1182,7 @@ class MallGamificationSystem:
         self.flash_event_admin = FlashEventAdminInterface(self.flash_events)
         self.customer_service = CustomerService()
         self.abu_dhabi_features = AbuDhabiSpecialFeatures()
+        self.wheel_of_fortune = WheelOfFortune(self)
 
         # Initialize WebAR Treasure Hunt if available
         self.webar_available = WEBAR_TREASURE_AVAILABLE
@@ -1268,7 +1270,14 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
+ codex/implement-realtime-leaderboard-service
         # Initialize flash events for time-bound promotions
+=======
+ codex/create-coin-duel-game-logic
+        # Demo flash event configuration
+=======
+ main
+ main
         self.flash_event_admin.define_zone("center_court", (0.0, 0.0), 50.0)
         self.flash_event_admin.schedule_event(
             "Weekend Blast",
@@ -1341,7 +1350,17 @@ class MallGamificationSystem:
             'reward': reward
         })
         return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
+ codex/implement-realtime-leaderboard-service
     
+=======
+
+ codex/create-coin-duel-game-logic
+=======
+    def spin_wheel(self, user_id: str):
+        """Expose wheel of fortune spin for users."""
+        return self.wheel_of_fortune.spin(user_id)
+ main
+ main
     def create_user(self, user_id: str, language: str = "en") -> User:
         """Create a new user with smart caching"""
         if SMART_CACHE_AVAILABLE:
