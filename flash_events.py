@@ -77,6 +77,10 @@ class FlashEventManager:
         if name in self.events:
             self.events[name].active = False
 
+    def get_active_events(self) -> List[FlashEvent]:
+        """Return a list of events currently marked as active."""
+        return [event for event in self.events.values() if event.active]
+
     # --- Participant Tracking ----------------------------------------------
     def record_participation(self, event_name: str, participant_id: str, progress: int = 1) -> bool:
         """Record progress for a participant in an active event."""
