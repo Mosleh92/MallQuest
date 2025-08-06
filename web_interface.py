@@ -1,3 +1,8 @@
+ codex/create-coin-duel-game-logic
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from mall_gamification_system import MallGamificationSystem
+from coin_duel import CoinDuelManager
+=======
 # Web Interface for Mall Gamification AI Control Panel
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort, g
 from flask_wtf.csrf import CSRFProtect
@@ -39,14 +44,16 @@ from config import BaseConfig
 import json
  main
 import logging
+ main
 import os
-from datetime import datetime
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+ codex/create-coin-duel-game-logic
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret')
+
+# Core systems
+mall_system = MallGamificationSystem()
+=======
 # Secret key must be provided via environment variable for session security
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
@@ -108,9 +115,17 @@ mall_db = MallDatabase()
 =======
  main
  main
+ main
 coin_duel_manager = CoinDuelManager(mall_system)
  ficjd7-codex/develop-milestone-rewards-system
 
+ codex/create-coin-duel-game-logic
+
+@app.route('/')
+def index():
+    """Landing page."""
+    return render_template('index.html')
+=======
 milestone_rewards = MilestoneRewards("milestone_rewards.db")
 =======
 milestone_rewards = MilestoneRewards()
@@ -146,11 +161,22 @@ def serve_locale(lang):
 =======
  main
  main
+ main
 
-# -----------------------------
-# AUTHENTICATION ROUTES
-# -----------------------------
 
+ codex/create-coin-duel-game-logic
+@app.route('/login', methods=['POST'])
+def login():
+    """Simple login to establish a session."""
+    data = request.get_json() or request.form
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'user_id required'}), 400
+    mall_system.create_user(user_id, 'en')
+    session['user_id'] = user_id
+    return redirect(url_for('player_dashboard', user_id=user_id))
+
+=======
 
 @app.route("/login", methods=["GET", "POST"])
 @rate_limiter.limit(max_requests=5, window_seconds=300)
@@ -511,20 +537,34 @@ def mfa_disable():
 def index():
     """Main landing page with language selection"""
     return render_template("index.html")
+ main
 
 
 @app.route("/player/<user_id>")
 def player_dashboard(user_id):
+ codex/create-coin-duel-game-logic
+    """Player dashboard showing active duels."""
+    if session.get('user_id') != user_id:
+        return redirect(url_for('index')), 401
+=======
     """Player Dashboard - Main user interface"""
     if "user_id" not in session or session["user_id"] != user_id:
         return redirect(url_for("login"))
 
+ main
     user = mall_system.get_user(user_id)
     if not user:
-        user = mall_system.create_user(user_id, "en")
-
-    user.login()
+        user = mall_system.create_user(user_id, 'en')
     dashboard_data = mall_system.get_user_dashboard(user_id)
+ codex/create-coin-duel-game-logic
+    return render_template(
+        'player_dashboard.html',
+        user=user,
+        dashboard=dashboard_data,
+        duels=coin_duel_manager.get_user_duels(user_id)
+    )
+
+=======
  ficjd7-codex/develop-milestone-rewards-system
 =======
  codex/refactor-for-tenant-database-schemas
@@ -737,25 +777,27 @@ def admin_wheel_audit():
 # -----------------------------
 # COIN DUEL ENDPOINTS
 # -----------------------------
+ main
 
 @app.route('/duel/start', methods=['POST'])
 def duel_start():
     """Start a coin duel with another player."""
     if 'user_id' not in session:
         return jsonify({'error': 'Authentication required'}), 401
-    data = request.get_json() if request.is_json else request.form
+    data = request.get_json() or request.form
     opponent_id = data.get('opponent_id')
     if not opponent_id:
         return jsonify({'error': 'Opponent ID required'}), 400
     duel_id = coin_duel_manager.start_duel(session['user_id'], opponent_id)
     return jsonify({'duel_id': duel_id})
 
+
 @app.route('/duel/update', methods=['POST'])
 def duel_update():
     """Update score for current user in a duel."""
     if 'user_id' not in session:
         return jsonify({'error': 'Authentication required'}), 401
-    data = request.get_json() if request.is_json else request.form
+    data = request.get_json() or request.form
     duel_id = data.get('duel_id')
     score = data.get('score')
     if duel_id is None or score is None:
@@ -769,12 +811,13 @@ def duel_update():
         return jsonify({'error': 'Invalid duel'}), 404
     return jsonify({'success': True})
 
+
 @app.route('/duel/finish', methods=['POST'])
 def duel_finish():
     """Conclude a duel and determine the winner."""
     if 'user_id' not in session:
         return jsonify({'error': 'Authentication required'}), 401
-    data = request.get_json() if request.is_json else request.form
+    data = request.get_json() or request.form
     duel_id = data.get('duel_id')
     if not duel_id:
         return jsonify({'error': 'Duel ID required'}), 400
@@ -782,6 +825,7 @@ def duel_finish():
     if not result:
         return jsonify({'error': 'Invalid duel'}), 404
     return jsonify(result)
+
 
 @app.route('/duel/status/<duel_id>')
 def duel_status(duel_id):
@@ -793,6 +837,11 @@ def duel_status(duel_id):
         return jsonify({'error': 'Duel not found'}), 404
     return jsonify(duel)
 
+ codex/create-coin-duel-game-logic
+
+if __name__ == '__main__':
+    app.run(debug=True)
+=======
  q7l2bc-codex/implement-wheel-of-fortune-features
 # -----------------------------
 # WHEEL OF FORTUNE SPIN
@@ -807,7 +856,7 @@ def wheel_spin():
     return jsonify(result)
 
 main
-=======
+
  main
 # -----------------------------
 # API ENDPOINTS
@@ -931,3 +980,4 @@ def api_claim_milestone():
 if __name__ == "__main__":
     app.run(debug=True)
 
+ main

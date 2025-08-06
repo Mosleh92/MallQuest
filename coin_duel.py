@@ -24,11 +24,21 @@ class CoinDuelManager:
         return duel_id
 
     def update_score(self, duel_id: str, user_id: str, score: int) -> bool:
-        """Update score for a player in an active duel."""
+        """Update score for a player in an active duel.
+
+        Also logs the update so the mall system can react in real time,
+        enabling live score tracking on user dashboards.
+        """
         duel = self.active_duels.get(duel_id)
         if not duel or user_id not in duel['players']:
             return False
         duel['scores'][user_id] = score
+        # Notify mall system for real-time tracking
+        self.mall_system.log_event('coin_duel_score_update', {
+            'duel_id': duel_id,
+            'user_id': user_id,
+            'score': score
+        })
         return True
 
     def conclude_duel(self, duel_id: str):
