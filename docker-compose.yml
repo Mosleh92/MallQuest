@@ -13,6 +13,7 @@ services:
       - FLASK_ENV=production
       - FLASK_APP=web_interface.py
       - DATABASE_URL=postgresql://mall_user:mall_password@db:5432/mall_gamification
+      - SHARD_COUNT=1
       - REDIS_URL=redis://redis:6379/0
       - REDIS_ENABLED=true
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
