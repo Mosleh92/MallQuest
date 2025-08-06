@@ -577,7 +577,10 @@
                         <div id="milestoneContainer">
                             {% for milestone in milestones %}
                             <div class="reward-item d-flex justify-content-between align-items-center">
-                                <span>{{ milestone.threshold }} XP</span>
+                                <span>
+                                    <span class="en-text">{{ milestone.threshold }} XP - +{{ milestone.reward.coins }} coins</span>
+                                    <span class="ar-text" style="display: none;">{{ milestone.threshold }} نقطة خبرة - +{{ milestone.reward.coins }} عملة</span>
+                                </span>
                                 <button class="btn btn-sm btn-primary claim-milestone" data-id="{{ milestone.id }}">
                                     <span class="en-text">Claim</span>
                                     <span class="ar-text" style="display: none;">استلم</span>
