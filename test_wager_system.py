@@ -4,6 +4,7 @@ import pytest
 from coin_duel import CoinDuelManager
 from wheel_of_fortune import WheelOfFortune
 from database import MallDatabase
+from mallquest_wager import wager_system
 
 
 class DummyUser:
@@ -98,3 +99,18 @@ def test_wheel_spin_probability(mall_system):
     results = [wheel.spin("alice")["prize"] for _ in range(1000)]
     gold_ratio = results.count("Gold") / len(results)
     assert 0.65 <= gold_ratio <= 0.75
+
+
+def test_safe_zone_timeline_scaling():
+    small = wager_system.generate_safe_zone_timeline(10)
+    large = wager_system.generate_safe_zone_timeline(40)
+    # large matches should start with a wider radius and higher end damage
+    assert small[0]["radius"] < large[0]["radius"]
+    assert small[-1]["damage_per_tick"] < large[-1]["damage_per_tick"]
+    assert len(large) >= len(small)
+
+
+def test_create_match_populates_safe_zone():
+    match = wager_system.create_match("Test", 5, expected_players=30)
+    assert match.safe_zone_timeline
+    assert match.safe_zone_timeline[0]["radius"] > match.safe_zone_timeline[-1]["radius"]

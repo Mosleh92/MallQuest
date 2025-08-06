@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import Dict, Set, List
+from typing import Dict, Set, List, TypedDict
 
 from database import MallDatabase, User
 
@@ -11,9 +11,64 @@ from database import MallDatabase, User
 _db = MallDatabase()
 
 
+class SafeZoneStage(TypedDict):
+    """Single stage of safe-zone progression."""
+
+    radius: float
+    shrink_duration: float
+    damage_per_tick: float
+
+
+def generate_safe_zone_timeline(player_count: int) -> List[SafeZoneStage]:
+    """Generate safe-zone stages based on expected ``player_count``.
+
+    Small matches (20 or fewer players) shrink faster with lighter damage,
+    while large matches start with a wider radius, shrink more gradually, and
+    inflict higher damage outside the zone. Each stage defines the ``radius`` of
+    the safe area, how long it takes to shrink to the next stage
+    (``shrink_duration`` in seconds), and the ``damage_per_tick`` dealt to
+    players outside the zone.
+    """
+
+    if player_count <= 20:  # small match
+        base_radius = 500.0
+        base_duration = 45.0
+        damage = 1.0
+        stages = 4
+    else:  # large match
+        base_radius = 1000.0
+        base_duration = 90.0
+        damage = 1.5
+        stages = 5
+
+    radius = base_radius
+    duration = base_duration
+    timeline: List[SafeZoneStage] = []
+    for _ in range(stages):
+        timeline.append(
+            {
+                "radius": radius,
+                "shrink_duration": duration,
+                "damage_per_tick": damage,
+            }
+        )
+        radius *= 0.6
+        duration *= 0.8
+        damage *= 1.5
+
+    return timeline
+
+
 @dataclass
 class WagerMatch:
-    """Simple in-memory representation of a wager match."""
+    """Simple in-memory representation of a wager match.
+
+    Attributes
+    ----------
+    safe_zone_timeline:
+        List of stages showing how the safe zone shrinks. Large matches generate
+        more stages with bigger starting radii and higher damage per tick.
+    """
 
     match_id: str
     name: str
@@ -22,15 +77,25 @@ class WagerMatch:
     members: Dict[str, str] = field(default_factory=dict)  # user_id -> squad_id
     eliminated: Set[str] = field(default_factory=set)
     active: bool = True
+    safe_zone_timeline: List[SafeZoneStage] = field(default_factory=list)
 
 
 # Registry for active matches
 _MATCHES: Dict[str, WagerMatch] = {}
 
 
-def create_match(name: str, stake_each: int) -> WagerMatch:
-    """Create a new :class:`WagerMatch` and register it."""
-    match = WagerMatch(match_id=uuid.uuid4().hex, name=name, stake_each=stake_each)
+def create_match(name: str, stake_each: int, expected_players: int = 0) -> WagerMatch:
+    """Create a new :class:`WagerMatch` and register it.
+
+    ``expected_players`` determines safe-zone scaling: small (<=20) vs. large
+    matches (>20).
+    """
+    match = WagerMatch(
+        match_id=uuid.uuid4().hex,
+        name=name,
+        stake_each=stake_each,
+        safe_zone_timeline=generate_safe_zone_timeline(expected_players),
+    )
     _MATCHES[match.match_id] = match
     return match
 
