@@ -347,6 +347,21 @@ def customer_service_dashboard():
     return render_template('customer_service_dashboard.html', dashboard=dashboard_data)
 
 
+ codex/create-webar-treasure-hunt-module
+@app.route('/webar/treasure-hunt', methods=['GET', 'POST'])
+def webar_treasure_hunt():
+    """WebAR Treasure Hunt interaction"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    if request.method == 'GET':
+        return render_template('webar_treasure_hunt.html', user_id=user_id)
+
+    result = mall_system.participate_treasure_hunt(user_id)
+    return jsonify(result)
+
+=======
 # -----------------------------
 # VOUCHER ROUTES
 # -----------------------------
@@ -472,6 +487,7 @@ def duel_status(duel_id):
         return jsonify({'error': 'Duel not found'}), 404
     return jsonify(duel)
 
+ main
 # -----------------------------
 # API ENDPOINTS
 # -----------------------------

@@ -79,6 +79,14 @@ except ImportError:
     COMPANION_SYSTEM_AVAILABLE = False
     print("[SYSTEM] Companion System not available")
 
+# Import WebAR Treasure Hunt
+try:
+    from webar_treasure_hunt import WebARTreasureHunt
+    WEBAR_TREASURE_AVAILABLE = True
+except ImportError:
+    WEBAR_TREASURE_AVAILABLE = False
+    print("[SYSTEM] WebAR Treasure Hunt module not available")
+
 # Import Smart Cache Manager for memory management
 try:
     from performance_module import get_smart_cache_manager
@@ -1173,6 +1181,15 @@ class MallGamificationSystem:
         self.flash_event_admin = FlashEventAdminInterface(self.flash_events)
         self.customer_service = CustomerService()
         self.abu_dhabi_features = AbuDhabiSpecialFeatures()
+
+        # Initialize WebAR Treasure Hunt if available
+        self.webar_available = WEBAR_TREASURE_AVAILABLE
+        if self.webar_available:
+            self.webar_treasure_hunt = WebARTreasureHunt()
+            print("[SYSTEM] WebAR Treasure Hunt initialized")
+        else:
+            self.webar_treasure_hunt = None
+            print("[SYSTEM] WebAR Treasure Hunt not available")
         
         # Initialize security and performance modules if available
         if SECURITY_PERFORMANCE_AVAILABLE:
@@ -1763,7 +1780,8 @@ class MallGamificationSystem:
             "friends": user.friends,
             "performance_metrics": performance_metrics,
             "visited_categories": user.visited_categories,
-            "purchase_history": user.purchase_history[-10:]  # Last 10 purchases
+            "purchase_history": user.purchase_history[-10:],  # Last 10 purchases
+            "webar_available": self.webar_available,
         }
     
     def get_team_leaderboard_position(self, team_id: str) -> int:
@@ -1946,7 +1964,37 @@ class MallGamificationSystem:
             
         except Exception as e:
             return {"status": "error", "message": f"Error generating missions: {str(e)}"}
-    
+
+    def participate_treasure_hunt(self, user_id: str):
+        """Participate in the WebAR Treasure Hunt."""
+        try:
+            if not self.webar_available:
+                return {"status": "error", "message": "WebAR Treasure Hunt not available"}
+
+            user = self.get_user(user_id)
+            if not user:
+                return {"status": "error", "message": "User not found"}
+
+            result = self.webar_treasure_hunt.participate(user_id)
+            if result.get("status") == "success":
+                coins = result.get("coins", 0)
+                user.coins += coins
+                user.rewards.append(f"AR Treasure Hunt reward: +{coins} coins")
+                mission = {
+                    "id": str(uuid.uuid4()),
+                    "type": "ar_treasure_hunt",
+                    "title": "AR Treasure Hunt",
+                    "progress": 1,
+                    "target": 1,
+                    "reward": coins,
+                    "xp_reward": int(coins * 0.5),
+                    "completed": True,
+                }
+                user.missions.append(mission)
+            return result
+        except Exception as e:
+            return {"status": "error", "message": f"Error in treasure hunt: {str(e)}"}
+
     def create_companion(self, user_id: str, companion_type: str, name: str = None):
         """Create a companion for the user"""
         try:
