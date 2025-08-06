@@ -1196,10 +1196,13 @@ class MallGamificationSystem:
         
         # Team system
         self.teams = {}
-        
+
         # Event management
         self.active_events = []
         self.team_challenges = {}
+
+        # Event logging
+        self.event_log = []
         
         # Initialize 3D Graphics if available
         self.graphics_3d_available = GRAPHICS_3D_AVAILABLE
@@ -1245,6 +1248,34 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
+
+    def log_event(self, event_type: str, details: dict):
+        """Record system events for auditing and analytics."""
+        self.event_log.append({
+            'type': event_type,
+            'details': details,
+            'timestamp': datetime.now()
+        })
+
+    def handle_coin_duel_result(self, duel_id: str, winner_id: str, loser_id: str, scores: dict):
+        """Allocate rewards to duel winner and log the outcome."""
+        reward = 50
+        winner = self.get_user(winner_id)
+        loser = self.get_user(loser_id)
+        if winner:
+            winner.coins += reward
+            winner.update_level()
+            winner.rewards.append(f"🏆 Won coin duel against {loser_id} +{reward} coins")
+        if loser:
+            loser.rewards.append(f"🎮 Lost coin duel against {winner_id}")
+        self.log_event('coin_duel_completed', {
+            'duel_id': duel_id,
+            'winner': winner_id,
+            'loser': loser_id,
+            'scores': scores,
+            'reward': reward
+        })
+        return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
     
     def create_user(self, user_id: str, language: str = "en") -> User:
         """Create a new user with smart caching"""
