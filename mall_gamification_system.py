@@ -29,6 +29,9 @@ from collections import defaultdict
 import json
 import hashlib
 import uuid
+import logging
+import logger as logger_config
+logger = logging.getLogger(__name__)
 from flash_events import FlashEventManager, FlashEventAdminInterface
 from wheel_of_fortune import WheelOfFortune
 
@@ -46,7 +49,7 @@ try:
     GRAPHICS_3D_AVAILABLE = True
 except ImportError:
     GRAPHICS_3D_AVAILABLE = False
-    print("[SYSTEM] 3D Graphics module not available, using basic effects")
+    logger.warning("[SYSTEM] 3D Graphics module not available, using basic effects")
 
 # Import Database System
 try:
@@ -54,7 +57,7 @@ try:
     DATABASE_AVAILABLE = True
 except ImportError:
     DATABASE_AVAILABLE = False
-    print("[SYSTEM] Database module not available, using in-memory storage")
+    logger.warning("[SYSTEM] Database module not available, using in-memory storage")
 
 # Import AI Mission Generator
 try:
@@ -62,7 +65,7 @@ try:
     AI_MISSIONS_AVAILABLE = True
 except ImportError:
     AI_MISSIONS_AVAILABLE = False
-    print("[SYSTEM] AI Mission Generator not available")
+    logger.warning("[SYSTEM] AI Mission Generator not available")
 
 # Import WiFi Verification
 try:
@@ -70,7 +73,7 @@ try:
     WIFI_VERIFICATION_AVAILABLE = True
 except ImportError:
     WIFI_VERIFICATION_AVAILABLE = False
-    print("[SYSTEM] WiFi Verification not available")
+    logger.warning("[SYSTEM] WiFi Verification not available")
 
 # Import Companion System
 try:
@@ -78,7 +81,7 @@ try:
     COMPANION_SYSTEM_AVAILABLE = True
 except ImportError:
     COMPANION_SYSTEM_AVAILABLE = False
-    print("[SYSTEM] Companion System not available")
+    logger.warning("[SYSTEM] Companion System not available")
 
 # Import WebAR Treasure Hunt
 try:
@@ -86,17 +89,17 @@ try:
     WEBAR_TREASURE_AVAILABLE = True
 except ImportError:
     WEBAR_TREASURE_AVAILABLE = False
-    print("[SYSTEM] WebAR Treasure Hunt module not available")
+    logger.warning("[SYSTEM] WebAR Treasure Hunt module not available")
 
 # Import Smart Cache Manager for memory management
 try:
     from performance_module import get_smart_cache_manager
     smart_cache_manager = get_smart_cache_manager()
     SMART_CACHE_AVAILABLE = True
-    print("[✅] Smart Cache Manager loaded")
+    logger.info("[✅] Smart Cache Manager loaded")
 except ImportError:
     SMART_CACHE_AVAILABLE = False
-    print("[⚠️] Smart Cache Manager not available - using basic storage")
+    logger.warning("[⚠️] Smart Cache Manager not available - using basic storage")
 
 # Import Security and Performance modules
 try:
@@ -109,10 +112,10 @@ try:
         get_performance_manager, get_performance_monitor
     )
     SECURITY_PERFORMANCE_AVAILABLE = True
-    print("[✅] Security and Performance modules loaded")
+    logger.info("[✅] Security and Performance modules loaded")
 except ImportError:
     SECURITY_PERFORMANCE_AVAILABLE = False
-    print("[⚠️] Security and Performance modules not available")
+    logger.warning("[⚠️] Security and Performance modules not available")
 
 # Visual/Graphics System
 def trigger_visual_effect(effect_type: str, payload=None):
@@ -125,7 +128,7 @@ def trigger_visual_effect(effect_type: str, payload=None):
             return trigger_3d_effect(effect_type)
     else:
         # Fallback to basic effects
-        print(f"[GRAPHIC EFFECT]: {effect_type} >> {payload}")
+        logger.info(f"[GRAPHIC EFFECT]: {effect_type} >> {payload}")
         return {"type": effect_type, "payload": payload, "mode": "basic"}
 
 # Smart data storage with memory management
@@ -133,12 +136,12 @@ if SMART_CACHE_AVAILABLE:
     # Use SmartCacheManager for controlled memory usage
     user_data = smart_cache_manager
     store_data = smart_cache_manager
-    print("[✅] Using Smart Cache Manager for memory management")
+    logger.info("[✅] Using Smart Cache Manager for memory management")
 else:
     # Fallback to basic storage (limited size)
     user_data = defaultdict(dict)
     store_data = defaultdict(dict)
-    print("[⚠️] Using basic storage - memory growth not controlled")
+    logger.warning("[⚠️] Using basic storage - memory growth not controlled")
 
 purchase_logs = []
 suspicious_receipts = []  # NEW: store receipts flagged as suspicious
@@ -1188,10 +1191,10 @@ class MallGamificationSystem:
         self.webar_available = WEBAR_TREASURE_AVAILABLE
         if self.webar_available:
             self.webar_treasure_hunt = WebARTreasureHunt()
-            print("[SYSTEM] WebAR Treasure Hunt initialized")
+            logger.info("[SYSTEM] WebAR Treasure Hunt initialized")
         else:
             self.webar_treasure_hunt = None
-            print("[SYSTEM] WebAR Treasure Hunt not available")
+            logger.warning("[SYSTEM] WebAR Treasure Hunt not available")
         
         # Initialize security and performance modules if available
         if SECURITY_PERFORMANCE_AVAILABLE:
@@ -1199,13 +1202,13 @@ class MallGamificationSystem:
             self.secure_database = get_secure_database()
             self.performance_manager = get_performance_manager()
             self.performance_monitor = get_performance_monitor()
-            print("[✅] Security and Performance modules integrated")
+            logger.info("[✅] Security and Performance modules integrated")
         else:
             self.security_manager = None
             self.secure_database = None
             self.performance_manager = None
             self.performance_monitor = None
-            print("[⚠️] Security and Performance modules not available")
+            logger.warning("[⚠️] Security and Performance modules not available")
         
         # Social features
         self.leaderboards = {
@@ -1231,32 +1234,32 @@ class MallGamificationSystem:
         if self.graphics_3d_available:
             try:
                 initialize_3d_system()
-                print("[SYSTEM] 3D Graphics system initialized successfully")
+                logger.info("[SYSTEM] 3D Graphics system initialized successfully")
             except Exception as e:
-                print(f"[SYSTEM] 3D Graphics initialization failed: {e}")
+                logger.warning(f"[SYSTEM] 3D Graphics initialization failed: {e}")
                 self.graphics_3d_available = False
 
         # Initialize Database if available
         self.database_available = DATABASE_AVAILABLE
         if self.database_available:
-            print("[SYSTEM] Database system initialized successfully")
+            logger.info("[SYSTEM] Database system initialized successfully")
         else:
-            print("[SYSTEM] Using in-memory storage")
+            logger.info("[SYSTEM] Using in-memory storage")
 
         # Initialize AI Mission Generator if available
         self.ai_missions_available = AI_MISSIONS_AVAILABLE
         if self.ai_missions_available:
-            print("[SYSTEM] AI Mission Generator initialized successfully")
+            logger.info("[SYSTEM] AI Mission Generator initialized successfully")
 
         # Initialize WiFi Verification if available
         self.wifi_verification_available = WIFI_VERIFICATION_AVAILABLE
         if self.wifi_verification_available:
-            print("[SYSTEM] WiFi Verification system initialized successfully")
+            logger.info("[SYSTEM] WiFi Verification system initialized successfully")
 
         # Initialize Companion System if available
         self.companion_system_available = COMPANION_SYSTEM_AVAILABLE
         if self.companion_system_available:
-            print("[SYSTEM] Companion System initialized successfully")
+            logger.info("[SYSTEM] Companion System initialized successfully")
         
         # Initialize some sample data
         self._initialize_sample_data()
@@ -1270,7 +1273,12 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
+ codex/clean-up-sample-data-initialization
         # Initialize sample flash event zone and event for time-bound promotions
+=======
+
+        # Initialize sample flash event zone and event
+ main
         self.flash_event_admin.define_zone("center_court", (0.0, 0.0), 50.0)
         self.flash_event_admin.schedule_event(
             "Weekend Blast",
@@ -1345,10 +1353,18 @@ class MallGamificationSystem:
         })
         return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
 
+ codex/clean-up-sample-data-initialization
     def spin_wheel(self, user_id: str):
         """Expose wheel of fortune spin for users."""
         return self.wheel_of_fortune.spin(user_id)
 
+=======
+    
+
+    def spin_wheel(self, user_id: str):
+        """Expose wheel of fortune spin for users."""
+        return self.wheel_of_fortune.spin(user_id)
+ main
     def create_user(self, user_id: str, language: str = "en") -> User:
         """Create a new user with smart caching"""
         if SMART_CACHE_AVAILABLE:
@@ -1435,10 +1451,16 @@ class MallGamificationSystem:
         reward_result = self.intelligent_reward_system.calculate_dynamic_reward(
             amount, store_category, user_profile, context
         )
-        
+
         # Apply rewards
         user.coins += reward_result['total_coins']
         user.add_xp(reward_result['xp_earned'], 'receipt_submission')
+        logger.info(
+            "Reward assigned to %s: +%s coins, +%s XP",
+            user_id,
+            reward_result['total_coins'],
+            reward_result['xp_earned'],
+        )
         
         # Add purchase record
         purchase_result = user.add_purchase(amount, store_category)
@@ -2132,17 +2154,17 @@ if __name__ == "__main__":
     shopkeeper_dashboard = mall_system.get_shopkeeper_dashboard("store1")
     cs_dashboard = mall_system.get_customer_service_dashboard()
     
-    print("=== USER DASHBOARD ===")
-    print(json.dumps(user_dashboard, indent=2, default=str))
+    logger.info("=== USER DASHBOARD ===")
+    logger.info(json.dumps(user_dashboard, indent=2, default=str))
     
-    print("\n=== ADMIN DASHBOARD ===")
-    print(json.dumps(admin_dashboard, indent=2, default=str))
+    logger.info("\n=== ADMIN DASHBOARD ===")
+    logger.info(json.dumps(admin_dashboard, indent=2, default=str))
     
-    print("\n=== SHOPKEEPER DASHBOARD ===")
-    print(json.dumps(shopkeeper_dashboard, indent=2, default=str))
+    logger.info("\n=== SHOPKEEPER DASHBOARD ===")
+    logger.info(json.dumps(shopkeeper_dashboard, indent=2, default=str))
     
-    print("\n=== CUSTOMER SERVICE DASHBOARD ===")
-    print(json.dumps(cs_dashboard, indent=2, default=str)) 
+    logger.info("\n=== CUSTOMER SERVICE DASHBOARD ===")
+    logger.info(json.dumps(cs_dashboard, indent=2, default=str)) 
 
 # Integration of Treasure Hunt
 from ar_treasure_hunt import TreasureHuntManager

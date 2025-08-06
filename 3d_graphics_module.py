@@ -4,6 +4,10 @@
 # Fixed import structure for proper dependency management
 import sys
 import os
+import logging
+import logger as logger_config
+
+logger = logging.getLogger(__name__)
 sys.path.append(os.path.dirname(__file__))
 
 try:
@@ -11,13 +15,19 @@ try:
     DATABASE_AVAILABLE = True
 except ImportError:
     DATABASE_AVAILABLE = False
-    print("[WARNING] Database module not available")
+    logger.warning("[WARNING] Database module not available")
 
 import json
 import random
 import time
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
+import logging
+try:
+    import pygame
+except ImportError:
+    pygame = None
+logger = logging.getLogger(__name__)
 import math
 
 # Proper error handling for missing dependencies
@@ -39,10 +49,10 @@ class SafeSystemInitializer:
             try:
                 module = __import__(module_name)
                 self.modules[module_name] = getattr(module, object_name)
-                print(f"[✅] {module_name} loaded successfully")
+                logger.info(f"[✅] {module_name} loaded successfully")
             except ImportError as e:
                 self.modules[module_name] = None
-                print(f"[⚠️] {module_name} not available: {e}")
+                logger.warning(f"[⚠️] {module_name} not available: {e}")
     
     def get_module(self, module_name):
         """Safely get module with None fallback"""
@@ -92,13 +102,13 @@ class GraphicsEngine:
     def enable_3d_graphics(self, mode: str = "realistic"):
         """Enable 3D graphics with specified mode"""
         self.graphics_mode = mode
-        print(f"[3D GRAPHICS] Enabled {mode} mode")
+        logger.info(f"[3D GRAPHICS] Enabled {mode} mode")
         return {"status": "success", "mode": mode}
     
     def set_graphics_quality(self, level: str = "ultra"):
         """Set graphics quality level"""
         self.quality_level = level
-        print(f"[3D GRAPHICS] Quality set to {level}")
+        logger.info(f"[3D GRAPHICS] Quality set to {level}")
         return {"status": "success", "quality": level}
     
     def load_3d_model(self, model_name: str, resolution: str = "high", lighting: str = "realistic"):
@@ -114,7 +124,7 @@ class GraphicsEngine:
         }
         
         self.loaded_models[model_name] = model_data
-        print(f"[3D GRAPHICS] Loaded {model_name} with {resolution} resolution")
+        logger.info(f"[3D GRAPHICS] Loaded {model_name} with {resolution} resolution")
         return {"status": "success", "model": model_name}
     
     def set_lighting(self, preset: str = "indoor_daylight", shadows: bool = True):
@@ -140,13 +150,13 @@ class GraphicsEngine:
             }
         }
         
-        print(f"[3D GRAPHICS] Lighting set to {preset} with shadows: {shadows}")
+        logger.info(f"[3D GRAPHICS] Lighting set to {preset} with shadows: {shadows}")
         return {"status": "success", "lighting": preset, "config": lighting_config.get(preset, {})}
     
     def set_player_motion(self, smooth_physics: bool = True):
         """Configure player motion physics"""
         self.smooth_physics = smooth_physics
-        print(f"[3D GRAPHICS] Smooth physics: {smooth_physics}")
+        logger.info(f"[3D GRAPHICS] Smooth physics: {smooth_physics}")
         return {"status": "success", "smooth_physics": smooth_physics}
     
     def create_player_character(self, name: str = "Visitor", avatar_style: str = "modern"):
@@ -163,7 +173,7 @@ class GraphicsEngine:
             "created_at": datetime.now()
         }
         
-        print(f"[3D GRAPHICS] Player character created: {name} ({avatar_style} style)")
+        logger.info(f"[3D GRAPHICS] Player character created: {name} ({avatar_style} style)")
         return {"status": "success", "character": self.player_character}
     
     def add_player_animations(self, animation_list: List[str]):
@@ -213,7 +223,7 @@ class GraphicsEngine:
         for anim_name in animation_list:
             if anim_name in available_animations:
                 self.player_character["animations"][anim_name] = available_animations[anim_name]
-                print(f"[3D GRAPHICS] Added animation: {anim_name}")
+                logger.info(f"[3D GRAPHICS] Added animation: {anim_name}")
         
         return {"status": "success", "animations_added": len(animation_list)}
     
@@ -254,7 +264,7 @@ class GraphicsEngine:
         
         if area in movement_zones:
             self.movement_zones[area] = movement_zones[area]
-            print(f"[3D GRAPHICS] Movement zone set: {area} ({movement_type})")
+            logger.info(f"[3D GRAPHICS] Movement zone set: {area} ({movement_type})")
             return {"status": "success", "zone": area, "movement_type": movement_type}
         else:
             return {"status": "error", "message": f"Unknown area: {area}"}
@@ -276,7 +286,7 @@ class GraphicsEngine:
             "collision_detection": True
         }
         
-        print(f"[3D GRAPHICS] Third-person camera enabled (smooth tracking: {smooth_tracking})")
+        logger.info(f"[3D GRAPHICS] Third-person camera enabled (smooth tracking: {smooth_tracking})")
         return {"status": "success", "camera_config": camera_config}
     
     def move_player(self, direction: str, speed: float = 1.0):
@@ -311,7 +321,7 @@ class GraphicsEngine:
                 if self.camera_mode == "third_person":
                     self._update_camera_position()
                 
-                print(f"[3D GRAPHICS] Player moved {direction} to {new_position}")
+                logger.info(f"[3D GRAPHICS] Player moved {direction} to {new_position}")
                 return {"status": "success", "new_position": new_position}
             else:
                 return {"status": "error", "message": "Movement blocked by zone boundaries"}
@@ -325,7 +335,7 @@ class GraphicsEngine:
         
         if animation_name in self.player_character["animations"]:
             animation = self.player_character["animations"][animation_name]
-            print(f"[3D GRAPHICS] Playing animation: {animation_name} ({animation['duration']}s)")
+            logger.info(f"[3D GRAPHICS] Playing animation: {animation_name} ({animation['duration']}s)")
             return {"status": "success", "animation": animation_name, "duration": animation["duration"]}
         else:
             return {"status": "error", "message": f"Animation not found: {animation_name}"}
@@ -414,7 +424,7 @@ class GraphicsEngine:
         }
         
         self.interactive_zones[name] = zone_config
-        print(f"[3D GRAPHICS] Interactive zone created: {name} at {location}")
+        logger.info(f"[3D GRAPHICS] Interactive zone created: {name} at {location}")
         return {"status": "success", "zone": zone_config}
     
     def trigger_reward_effect(self, type: str = "coin_sparkle", amount: int = 10):
@@ -439,7 +449,7 @@ class GraphicsEngine:
         elif type == "vip_flash":
             self._trigger_vip_flash_effect(amount)
         
-        print(f"[3D GRAPHICS] Reward effect triggered: {type} ({amount})")
+        logger.info(f"[3D GRAPHICS] Reward effect triggered: {type} ({amount})")
         return {"status": "success", "effect": effect_config}
     
     def load_minigame(self, name: str, location: str, cooldown: str = "2h"):
@@ -464,7 +474,7 @@ class GraphicsEngine:
         }
         
         self.minigames[name] = minigame_config
-        print(f"[3D GRAPHICS] Minigame loaded: {name} at {location} (cooldown: {cooldown})")
+        logger.info(f"[3D GRAPHICS] Minigame loaded: {name} at {location} (cooldown: {cooldown})")
         return {"status": "success", "minigame": minigame_config}
     
     def lock_game_to_wifi(self, ssid: str = "Deerfields_Free_WiFi"):
@@ -482,7 +492,7 @@ class GraphicsEngine:
         }
         
         self.wifi_restrictions["main"] = wifi_config
-        print(f"[3D GRAPHICS] Game locked to WiFi: {ssid}")
+        logger.info(f"[3D GRAPHICS] Game locked to WiFi: {ssid}")
         return {"status": "success", "wifi_config": wifi_config}
     
     def set_outside_warning(self, message_en: str, message_ar: str):
@@ -500,7 +510,7 @@ class GraphicsEngine:
         }
         
         self.wifi_restrictions["warning"] = warning_config
-        print(f"[3D GRAPHICS] Outside warning set: {message_en}")
+        logger.warning(f"[3D GRAPHICS] Outside warning set: {message_en}")
         return {"status": "success", "warning": warning_config}
     
     def check_wifi_connection(self) -> bool:
@@ -540,7 +550,7 @@ class GraphicsEngine:
         # Update zone cooldown
         zone["last_triggered"] = datetime.now()
         
-        print(f"[3D GRAPHICS] Zone interaction triggered: {zone_name}")
+        logger.info(f"[3D GRAPHICS] Zone interaction triggered: {zone_name}")
         return {"status": "success", "reward": reward_result, "zone": zone_name}
     
     def start_minigame(self, minigame_name: str, player_position: Dict) -> Dict:
@@ -562,7 +572,7 @@ class GraphicsEngine:
         # Start minigame
         minigame["last_played"] = datetime.now()
         
-        print(f"[3D GRAPHICS] Minigame started: {minigame_name}")
+        logger.info(f"[3D GRAPHICS] Minigame started: {minigame_name}")
         return {"status": "success", "minigame": minigame_name, "rewards": minigame["rewards"]}
     
     def _get_zone_position(self, location: str) -> Dict:
@@ -707,17 +717,17 @@ class GraphicsEngine:
     
     def _trigger_coin_sparkle_effect(self, amount: int):
         """Trigger coin sparkle visual effect"""
-        print(f"[3D GRAPHICS] 🪙 Coin sparkle effect: {amount} coins!")
+        logger.info(f"[3D GRAPHICS] 🪙 Coin sparkle effect: {amount} coins!")
         # In real implementation, this would trigger actual visual effects
     
     def _trigger_xp_burst_effect(self, amount: int):
         """Trigger XP burst visual effect"""
-        print(f"[3D GRAPHICS] ⚡ XP burst effect: {amount} XP!")
+        logger.info(f"[3D GRAPHICS] ⚡ XP burst effect: {amount} XP!")
         # In real implementation, this would trigger actual visual effects
     
     def _trigger_vip_flash_effect(self, amount: int):
         """Trigger VIP flash visual effect"""
-        print(f"[3D GRAPHICS] 👑 VIP flash effect: {amount} VIP points!")
+        logger.info(f"[3D GRAPHICS] 👑 VIP flash effect: {amount} VIP points!")
         # In real implementation, this would trigger actual visual effects
     
     def set_ui_language_support(self, languages: List[str]):
@@ -776,13 +786,13 @@ class GraphicsEngine:
                 valid_languages.append(lang)
                 self.language_support[lang] = supported_languages[lang]
             else:
-                print(f"[3D GRAPHICS] Warning: Language '{lang}' not supported")
+                logger.warning(f"[3D GRAPHICS] Warning: Language '{lang}' not supported")
         
         # Set default language
         if valid_languages:
             self.ui_system["current_language"] = valid_languages[0]
             self.ui_system["supported_languages"] = valid_languages
-            print(f"[3D GRAPHICS] UI language support set: {valid_languages}")
+            logger.info(f"[3D GRAPHICS] UI language support set: {valid_languages}")
             return {"status": "success", "languages": valid_languages}
         else:
             return {"status": "error", "message": "No valid languages provided"}
@@ -815,7 +825,7 @@ class GraphicsEngine:
         }
         
         self.main_menu = menu_config
-        print(f"[3D GRAPHICS] Main menu loaded: {options} (font: {font})")
+        logger.info(f"[3D GRAPHICS] Main menu loaded: {options} (font: {font})")
         return {"status": "success", "menu": menu_config}
     
     def add_top_bar(self, coins_visible: bool = True, language_toggle: bool = True):
@@ -863,7 +873,7 @@ class GraphicsEngine:
         }
         
         self.top_bar = top_bar_config
-        print(f"[3D GRAPHICS] Top bar added (coins: {coins_visible}, language: {language_toggle})")
+        logger.info(f"[3D GRAPHICS] Top bar added (coins: {coins_visible}, language: {language_toggle})")
         return {"status": "success", "top_bar": top_bar_config}
     
     def switch_language(self, language: str):
@@ -871,7 +881,7 @@ class GraphicsEngine:
         if language in self.language_support:
             self.ui_system["current_language"] = language
             lang_config = self.language_support[language]
-            print(f"[3D GRAPHICS] Language switched to: {lang_config['name']} ({lang_config['direction']})")
+            logger.info(f"[3D GRAPHICS] Language switched to: {lang_config['name']} ({lang_config['direction']})")
             return {"status": "success", "language": language, "direction": lang_config["direction"]}
         else:
             return {"status": "error", "message": f"Language '{language}' not supported"}
@@ -904,7 +914,7 @@ class GraphicsEngine:
                 "direction": lang_config.get("direction", "ltr")
             })
         
-        print(f"[3D GRAPHICS] Main menu rendered in {current_lang}")
+        logger.info(f"[3D GRAPHICS] Main menu rendered in {current_lang}")
         return {"status": "success", "menu_items": menu_items, "language": current_lang}
     
     def render_top_bar(self, coins: int = 0, xp: int = 0):
@@ -934,13 +944,13 @@ class GraphicsEngine:
             }
         }
         
-        print(f"[3D GRAPHICS] Top bar rendered (coins: {coins}, xp: {xp}, lang: {current_lang})")
+        logger.info(f"[3D GRAPHICS] Top bar rendered (coins: {coins}, xp: {xp}, lang: {current_lang})")
         return {"status": "success", "top_bar_data": top_bar_data}
     
     def update_coin_display(self, new_amount: int):
         """Update coin display in top bar"""
         if self.top_bar and self.top_bar["coins_visible"]:
-            print(f"[3D GRAPHICS] Coin display updated: {new_amount}")
+            logger.info(f"[3D GRAPHICS] Coin display updated: {new_amount}")
             return {"status": "success", "coins": new_amount}
         else:
             return {"status": "error", "message": "Coin display not enabled"}
@@ -948,7 +958,7 @@ class GraphicsEngine:
     def update_xp_display(self, new_amount: int):
         """Update XP display in top bar - FIXED VERSION"""
         if self.top_bar and self.top_bar["elements"]["xp_display"]["visible"]:
-            print(f"[3D GRAPHICS] XP display updated: {new_amount}")
+            logger.info(f"[3D GRAPHICS] XP display updated: {new_amount}")
             return {"status": "success", "xp": new_amount}
         else:
             return {"status": "error", "message": "XP display not enabled"}
@@ -977,15 +987,21 @@ class GraphicsEngine:
         }
         
         self.incentive_system["login_streak"] = streak_config
-        print(f"[3D GRAPHICS] Login streak rewards enabled: {days_required} days for {bonus_coins} coins")
+        logger.info(f"[3D GRAPHICS] Login streak rewards enabled: {days_required} days for {bonus_coins} coins")
         return {"status": "success", "streak_config": streak_config}
     
-    def play_sound(self, sound_file: str):
-        """Play sound effect for rewards and interactions"""
+    def play_sound(self, sound_file: str, volume: float = 0.8, loop: bool = False):
+        """Play sound effect for rewards and interactions.
+
+        Args:
+            sound_file: Path to the audio file.
+            volume: Playback volume between 0.0 and 1.0.
+            loop: Whether the sound should loop continuously.
+        """
         sound_config = {
             "file": sound_file,
-            "volume": 0.8,
-            "loop": False,
+            "volume": volume,
+            "loop": loop,
             "category": self._get_sound_category(sound_file),
             "effects": {
                 "fade_in": True,
@@ -994,14 +1010,29 @@ class GraphicsEngine:
             },
             "played_at": datetime.now()
         }
-        
+
         self.sound_system[sound_file] = sound_config
+ codex/add-audio-library-and-update-sound-methods
+
+        # Trigger sound effect using audio library
+        success = self._trigger_sound_effect(sound_file, volume=volume, loop=loop)
+
+        if success:
+            logger.info("[3D GRAPHICS] Sound played: %s", sound_file)
+            status = "success"
+        else:
+            logger.error("[3D GRAPHICS] Failed to play sound: %s", sound_file)
+            status = "error"
+
+        return {"status": status, "sound": sound_config}
+=======
         
         # Trigger sound effect
         self._trigger_sound_effect(sound_file)
         
-        print(f"[3D GRAPHICS] Sound played: {sound_file}")
+        logger.info(f"[3D GRAPHICS] Sound played: {sound_file}")
         return {"status": "success", "sound": sound_config}
+ main
     
     def create_daily_quest(self, title: str, reward: int = 15):
         """Create daily quest with specific reward"""
@@ -1030,7 +1061,7 @@ class GraphicsEngine:
         quest_id = f"daily_{int(time.time())}"
         self.quest_system[quest_id] = quest_config
         
-        print(f"[3D GRAPHICS] Daily quest created: {title} ({reward} coins)")
+        logger.info(f"[3D GRAPHICS] Daily quest created: {title} ({reward} coins)")
         return {"status": "success", "quest_id": quest_id, "quest": quest_config}
     
     def integrate_with_brand(self, brand_name: str, feature: str):
@@ -1056,7 +1087,7 @@ class GraphicsEngine:
         }
         
         self.brand_integration[brand_name] = brand_config
-        print(f"[3D GRAPHICS] Brand integration: {brand_name} - {feature}")
+        logger.info(f"[3D GRAPHICS] Brand integration: {brand_name} - {feature}")
         return {"status": "success", "brand": brand_config}
     
     def record_login(self, user_id: str):
@@ -1075,18 +1106,18 @@ class GraphicsEngine:
             if days_diff == 1:
                 # Consecutive login
                 streak_config["current_streak"] += 1
-                print(f"[3D GRAPHICS] Consecutive login: Day {streak_config['current_streak']}")
+                logger.info(f"[3D GRAPHICS] Consecutive login: Day {streak_config['current_streak']}")
             elif days_diff > 1:
                 # Streak broken
                 streak_config["current_streak"] = 1
-                print(f"[3D GRAPHICS] Streak broken, starting new streak")
+                logger.info(f"[3D GRAPHICS] Streak broken, starting new streak")
             else:
                 # Same day login
-                print(f"[3D GRAPHICS] Same day login recorded")
+                logger.info(f"[3D GRAPHICS] Same day login recorded")
         else:
             # First login
             streak_config["current_streak"] = 1
-            print(f"[3D GRAPHICS] First login recorded")
+            logger.info(f"[3D GRAPHICS] First login recorded")
         
         # Update max streak
         if streak_config["current_streak"] > streak_config["max_streak"]:
@@ -1125,7 +1156,7 @@ class GraphicsEngine:
         # Trigger visual effects
         self._trigger_quest_completion_effects(quest)
         
-        print(f"[3D GRAPHICS] Quest completed: {quest['title']}")
+        logger.info(f"[3D GRAPHICS] Quest completed: {quest['title']}")
         return {"status": "success", "rewards": rewards, "quest": quest}
     
     def update_quest_progress(self, quest_id: str, progress: int = 1):
@@ -1143,7 +1174,7 @@ class GraphicsEngine:
         # Check if quest is completed
         if quest["progress"] >= quest["target"]:
             quest["status"] = "ready_to_claim"
-            print(f"[3D GRAPHICS] Quest ready to claim: {quest['title']}")
+            logger.info(f"[3D GRAPHICS] Quest ready to claim: {quest['title']}")
         
         return {"status": "success", "progress": quest["progress"], "target": quest["target"]}
     
@@ -1179,20 +1210,40 @@ class GraphicsEngine:
         else:
             return "general"
     
-    def _trigger_sound_effect(self, sound_file: str):
-        """Trigger sound effect"""
+    def _trigger_sound_effect(self, sound_file: str, volume: float = 0.8, loop: bool = False) -> bool:
+        """Trigger sound effect using pygame mixer."""
+        if pygame is None:
+            logger.error("pygame is not installed; cannot play sound: %s", sound_file)
+            return False
         category = self._get_sound_category(sound_file)
+ codex/add-audio-library-and-update-sound-methods
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            sound = pygame.mixer.Sound(sound_file)
+            sound.set_volume(volume)
+            loops = -1 if loop else 0
+            sound.play(loops=loops)
+            logger.info("[3D GRAPHICS] %s sound: %s", category, sound_file)
+            return True
+        except FileNotFoundError:
+            logger.error("Sound file not found: %s", sound_file)
+        except Exception as e:
+            logger.error("Error playing sound %s: %s", sound_file, e)
+        return False
+=======
         
         if category == "rewards":
-            print(f"[3D GRAPHICS] 🔊 Playing reward sound: {sound_file}")
+            logger.info(f"[3D GRAPHICS] 🔊 Playing reward sound: {sound_file}")
         elif category == "quests":
-            print(f"[3D GRAPHICS] 🎯 Playing quest sound: {sound_file}")
+            logger.info(f"[3D GRAPHICS] 🎯 Playing quest sound: {sound_file}")
         elif category == "achievements":
-            print(f"[3D GRAPHICS] 🏆 Playing achievement sound: {sound_file}")
+            logger.info(f"[3D GRAPHICS] 🏆 Playing achievement sound: {sound_file}")
         elif category == "brands":
-            print(f"[3D GRAPHICS] 🏛️ Playing brand sound: {sound_file}")
+            logger.info(f"[3D GRAPHICS] 🏛️ Playing brand sound: {sound_file}")
         else:
-            print(f"[3D GRAPHICS] 🔊 Playing general sound: {sound_file}")
+            logger.info(f"[3D GRAPHICS] 🔊 Playing general sound: {sound_file}")
+ main
     
     def _get_tomorrow_midnight(self) -> datetime:
         """Get tomorrow at midnight for quest expiration"""
@@ -1278,7 +1329,7 @@ class GraphicsEngine:
             # Trigger visual effects
             self._trigger_streak_celebration_effects(current_streak)
             
-            print(f"[3D GRAPHICS] 🎉 Streak reward: {current_streak} days! +{bonus_coins} coins")
+            logger.info(f"[3D GRAPHICS] 🎉 Streak reward: {current_streak} days! +{bonus_coins} coins")
             
             return {
                 "type": "streak_bonus",
@@ -1291,12 +1342,12 @@ class GraphicsEngine:
     
     def _trigger_quest_completion_effects(self, quest: Dict):
         """Trigger quest completion visual effects"""
-        print(f"[3D GRAPHICS] 🎯 Quest completion effects: {quest['title']}")
+        logger.info(f"[3D GRAPHICS] 🎯 Quest completion effects: {quest['title']}")
         # In real implementation, this would trigger actual visual effects
     
     def _trigger_streak_celebration_effects(self, streak_days: int):
         """Trigger streak celebration visual effects"""
-        print(f"[3D GRAPHICS] 🎉 Streak celebration effects: {streak_days} days!")
+        logger.info(f"[3D GRAPHICS] 🎉 Streak celebration effects: {streak_days} days!")
         # In real implementation, this would trigger actual visual effects
     
     def generate_invite_link(self, user_id: str):
@@ -1319,7 +1370,7 @@ class GraphicsEngine:
             }
             
             self.invite_system[user_id] = invite_config
-            print(f"[3D GRAPHICS] Invite link generated: {invite_link}")
+            logger.info(f"[3D GRAPHICS] Invite link generated: {invite_link}")
             return {"status": "success", "invite_link": invite_link, "config": invite_config}
         else:
             return {"status": "error", "message": "Must be connected to mall WiFi to generate invite link"}
@@ -1342,11 +1393,11 @@ class GraphicsEngine:
             
             # Award rewards to inviter
             inviter_rewards = invite_config["rewards"]["inviter"]
-            print(f"[3D GRAPHICS] Inviter rewards: +{inviter_rewards['coins']} coins, +{inviter_rewards['xp']} XP")
+            logger.info(f"[3D GRAPHICS] Inviter rewards: +{inviter_rewards['coins']} coins, +{inviter_rewards['xp']} XP")
             
             # Award rewards to invitee
             invitee_rewards = invite_config["rewards"]["invitee"]
-            print(f"[3D GRAPHICS] Invitee rewards: +{invitee_rewards['coins']} coins, +{invitee_rewards['xp']} XP")
+            logger.info(f"[3D GRAPHICS] Invitee rewards: +{invitee_rewards['coins']} coins, +{invitee_rewards['xp']} XP")
             
             # Play celebration sound
             self.play_sound("invite_success.wav")
@@ -1393,7 +1444,7 @@ class GraphicsEngine:
         }
         
         self.user_management[user_id] = user_config
-        print(f"[3D GRAPHICS] User created: {name} ({user_id})")
+        logger.info(f"[3D GRAPHICS] User created: {name} ({user_id})")
         return {"status": "success", "user": user_config}
     
     def get_user(self, user_id: str):
@@ -1417,14 +1468,14 @@ class GraphicsEngine:
         new_level = (user["stats"]["total_xp"] // 1000) + 1
         if new_level > user["stats"]["level"]:
             user["stats"]["level"] = new_level
-            print(f"[3D GRAPHICS] User {user_id} leveled up to {new_level}!")
+            logger.info(f"[3D GRAPHICS] User {user_id} leveled up to {new_level}!")
             self.play_sound("level_up.wav")
         
         return {"status": "success", "user": user}
     
     def _trigger_invite_success_effects(self, user_id: str, referrer_id: str):
         """Trigger invite success visual effects"""
-        print(f"[3D GRAPHICS] 🎉 Invite success effects: {user_id} invited by {referrer_id}")
+        logger.info(f"[3D GRAPHICS] 🎉 Invite success effects: {user_id} invited by {referrer_id}")
         # In real implementation, this would trigger actual visual effects
     
     def load_environment(self, model_file: str, lighting: str = "realistic", resolution: str = "ultra"):
@@ -1452,7 +1503,7 @@ class GraphicsEngine:
         }
         
         self.environment_3d["mall_interior"] = environment_config
-        print(f"[3D GRAPHICS] Environment loaded: {model_file} with {lighting} lighting at {resolution} resolution")
+        logger.info(f"[3D GRAPHICS] Environment loaded: {model_file} with {lighting} lighting at {resolution} resolution")
         return {"status": "success", "environment": environment_config}
     
     def set_camera(self, mode: str = "third_person", smooth: bool = True, collision: bool = True):
@@ -1475,7 +1526,7 @@ class GraphicsEngine:
         }
         
         self.environment_3d["camera"] = camera_config
-        print(f"[3D GRAPHICS] Camera set: {mode} mode, smooth={smooth}, collision={collision}")
+        logger.info(f"[3D GRAPHICS] Camera set: {mode} mode, smooth={smooth}, collision={collision}")
         return {"status": "success", "camera": camera_config}
     
     def create_avatar(self, name: str, style: str = "arab_emirati", outfit: str = "kandura", speed: float = 1.5):
@@ -1505,7 +1556,7 @@ class GraphicsEngine:
         }
         
         self.avatar_system[name] = avatar_config
-        print(f"[3D GRAPHICS] Avatar created: {name} with {style} style, {outfit} outfit")
+        logger.info(f"[3D GRAPHICS] Avatar created: {name} with {style} style, {outfit} outfit")
         return {"status": "success", "avatar": avatar_config}
     
     def attach_companion(self, player_name: str, companion_type: str = "falcon_drone"):
@@ -1530,7 +1581,7 @@ class GraphicsEngine:
         
         if player_name in self.avatar_system:
             self.avatar_system[player_name]["companion"] = companion_config
-            print(f"[3D GRAPHICS] Companion attached: {companion_type} to {player_name}")
+            logger.info(f"[3D GRAPHICS] Companion attached: {companion_type} to {player_name}")
             return {"status": "success", "companion": companion_config}
         else:
             return {"status": "error", "message": "Player avatar not found"}
@@ -1561,7 +1612,7 @@ class GraphicsEngine:
         
         shop_id = f"{brand.lower()}_{location}"
         self.shop_system[shop_id] = shop_config
-        print(f"[3D GRAPHICS] Shop added: {brand} at {location} with offer: {offer}")
+        logger.info(f"[3D GRAPHICS] Shop added: {brand} at {location} with offer: {offer}")
         return {"status": "success", "shop": shop_config}
     
     def create_mission(self, title: str, reward: str, condition: str, location: str = None, time_limit: str = None):
@@ -1587,7 +1638,7 @@ class GraphicsEngine:
         
         mission_id = f"mission_{int(time.time())}"
         self.mission_system[mission_id] = mission_config
-        print(f"[3D GRAPHICS] Mission created: {title} with reward {reward}")
+        logger.info(f"[3D GRAPHICS] Mission created: {title} with reward {reward}")
         return {"status": "success", "mission_id": mission_id, "mission": mission_config}
     
     def trigger_visual_effect(self, effect_type: str, payload: Dict = None):
@@ -1607,13 +1658,13 @@ class GraphicsEngine:
         if effect_type == "coin_shower":
             amount = payload.get("amount", 10)
             color = payload.get("color", "gold")
-            print(f"[3D GRAPHICS] 🪙 Coin shower effect: {amount} {color} coins!")
+            logger.info(f"[3D GRAPHICS] 🪙 Coin shower effect: {amount} {color} coins!")
             self.play_sound("coin_collect.wav")
         elif effect_type == "mission_complete":
-            print(f"[3D GRAPHICS] 🎯 Mission completion effect!")
+            logger.info(f"[3D GRAPHICS] 🎯 Mission completion effect!")
             self.play_sound("mission_complete.wav")
         elif effect_type == "level_up":
-            print(f"[3D GRAPHICS] 🏆 Level up celebration effect!")
+            logger.info(f"[3D GRAPHICS] 🏆 Level up celebration effect!")
             self.play_sound("level_up.wav")
         
         return {"status": "success", "effect": effect_config}
@@ -1639,7 +1690,7 @@ class GraphicsEngine:
         }
         
         self.environment_3d["lighting"] = lighting_config
-        print(f"[3D GRAPHICS] Environment lighting set: {mode} mode with reflections={reflections}")
+        logger.info(f"[3D GRAPHICS] Environment lighting set: {mode} mode with reflections={reflections}")
         return {"status": "success", "lighting": lighting_config}
     
     def add_banner(self, text: str, language: str = "ar", location: str = "entrance"):
@@ -1666,7 +1717,7 @@ class GraphicsEngine:
         banner_id = f"banner_{int(time.time())}"
         self.environment_3d["banners"] = self.environment_3d.get("banners", {})
         self.environment_3d["banners"][banner_id] = banner_config
-        print(f"[3D GRAPHICS] Banner added: {text} at {location}")
+        logger.info(f"[3D GRAPHICS] Banner added: {text} at {location}")
         return {"status": "success", "banner": banner_config}
     
     def add_ai_npc(self, name: str, role: str, dialogue: Dict):
@@ -1697,7 +1748,7 @@ class GraphicsEngine:
         }
         
         self.ai_npc_system[name] = npc_config
-        print(f"[3D GRAPHICS] AI NPC added: {name} as {role}")
+        logger.info(f"[3D GRAPHICS] AI NPC added: {name} as {role}")
         return {"status": "success", "npc": npc_config}
     
     def define_walk_path(self, start: str, end: str, waypoints: List[str]):
@@ -1723,7 +1774,7 @@ class GraphicsEngine:
         
         path_id = f"path_{start}_{end}"
         self.path_system[path_id] = path_config
-        print(f"[3D GRAPHICS] Walk path defined: {start} to {end} via {waypoints}")
+        logger.info(f"[3D GRAPHICS] Walk path defined: {start} to {end} via {waypoints}")
         return {"status": "success", "path": path_config}
     
     def add_game_zone(self, name: str, activities: List[str], age_limit: int = 12):
@@ -1753,7 +1804,7 @@ class GraphicsEngine:
         }
         
         self.kid_zone_system[name] = zone_config
-        print(f"[3D GRAPHICS] Kids zone added: {name} with {activities}")
+        logger.info(f"[3D GRAPHICS] Kids zone added: {name} with {activities}")
         return {"status": "success", "zone": zone_config}
     
     def track_user_location(self, live: bool = True, trigger_events_nearby: bool = True):
@@ -1778,7 +1829,7 @@ class GraphicsEngine:
         }
         
         self.location_tracking["config"] = tracking_config
-        print(f"[3D GRAPHICS] Location tracking enabled: live={live}, events={trigger_events_nearby}")
+        logger.info(f"[3D GRAPHICS] Location tracking enabled: live={live}, events={trigger_events_nearby}")
         return {"status": "success", "tracking": tracking_config}
     
     def show_mall_map_overlay(self, highlight: List[str]):
@@ -1803,7 +1854,7 @@ class GraphicsEngine:
         }
         
         self.location_tracking["map_overlay"] = map_config
-        print(f"[3D GRAPHICS] Mall map overlay shown with highlights: {highlight}")
+        logger.info(f"[3D GRAPHICS] Mall map overlay shown with highlights: {highlight}")
         return {"status": "success", "map": map_config}
     
     def _get_zone_position(self, zone: str) -> Dict:
@@ -1981,7 +2032,7 @@ class VisualEffects:
         }
         
         self.active_effects.append(effect)
-        print(f"[VISUAL EFFECT] Coin drop: {amount} coins at {position}")
+        logger.info(f"[VISUAL EFFECT] Coin drop: {amount} coins at {position}")
         return effect
     
     def trigger_level_up(self, user_id: str, new_level: int):
@@ -1997,7 +2048,7 @@ class VisualEffects:
         }
         
         self.active_effects.append(effect)
-        print(f"[VISUAL EFFECT] Level up: User {user_id} reached level {new_level}")
+        logger.info(f"[VISUAL EFFECT] Level up: User {user_id} reached level {new_level}")
         return effect
     
     def trigger_mission_complete(self, mission_name: str, reward: int):
@@ -2013,7 +2064,7 @@ class VisualEffects:
         }
         
         self.active_effects.append(effect)
-        print(f"[VISUAL EFFECT] Mission complete: {mission_name}")
+        logger.info(f"[VISUAL EFFECT] Mission complete: {mission_name}")
         return effect
     
     def trigger_receipt_submitted(self, store_name: str, coins_earned: int):
@@ -2029,7 +2080,7 @@ class VisualEffects:
         }
         
         self.active_effects.append(effect)
-        print(f"[VISUAL EFFECT] Receipt submitted: {store_name}")
+        logger.info(f"[VISUAL EFFECT] Receipt submitted: {store_name}")
         return effect
     
     def _generate_coin_particles(self, amount: int) -> List[Dict]:
@@ -2223,7 +2274,7 @@ class MallEnvironment:
                 "lighting_intensity": 2.0,
                 "glow_color": {"r": 1.0, "g": 1.0, "b": 0.0}
             }
-            print(f"[3D ENVIRONMENT] Highlighting store: {store_name}")
+            logger.info(f"[3D ENVIRONMENT] Highlighting store: {store_name}")
             return effect
         return None
 
@@ -2254,7 +2305,7 @@ class GraphicsController:
         self.graphics_engine.set_player_motion(smooth_physics=True)
         
         self.is_initialized = True
-        print("[3D GRAPHICS] Complete 3D system initialized successfully!")
+        logger.info("[3D GRAPHICS] Complete 3D system initialized successfully!")
         return {"status": "success", "message": "3D graphics system ready"}
     
     def trigger_gamification_effect(self, effect_type: str, **kwargs):
@@ -2272,7 +2323,7 @@ class GraphicsController:
         if effect_type in effects_map:
             return effects_map[effect_type](**kwargs)
         else:
-            print(f"[3D GRAPHICS] Unknown effect type: {effect_type}")
+            logger.info(f"[3D GRAPHICS] Unknown effect type: {effect_type}")
             return None
     
     def get_mall_environment_data(self):
@@ -2428,9 +2479,9 @@ def enable_login_streak_rewards(days_required=5, bonus_coins=20):
     """Enable login streak rewards for continuous presence"""
     return graphics_controller.graphics_engine.enable_login_streak_rewards(days_required, bonus_coins)
 
-def play_sound(sound_file):
+def play_sound(sound_file, volume=0.8, loop=False):
     """Play sound effect for rewards and interactions"""
-    return graphics_controller.graphics_engine.play_sound(sound_file)
+    return graphics_controller.graphics_engine.play_sound(sound_file, volume, loop)
 
 def create_daily_quest(title, reward=15):
     """Create daily quest with specific reward"""
