@@ -180,53 +180,30 @@
     <script>
         let currentLanguage = 'en';
         let mfaRequired = false;
-        
-        const translations = {
-            en: {
-                login: 'Login',
-                user_id: 'User ID:',
-                password: 'Password:',
-                otp: 'OTP Code:',
-                login_btn: 'Login',
-                mfa_required: 'Two-factor authentication is required. Please enter your OTP code.',
-                setup_mfa: 'Setup MFA',
-                error_credentials: 'Invalid credentials',
-                error_otp_required: 'OTP required',
-                error_otp_invalid: 'Invalid OTP code',
-                error_user_not_found: 'User not found',
-                error_required_fields: 'User ID and password are required'
-            },
-            ar: {
-                login: 'تسجيل الدخول',
-                user_id: 'معرف المستخدم:',
-                password: 'كلمة المرور:',
-                otp: 'رمز التحقق:',
-                login_btn: 'تسجيل الدخول',
-                mfa_required: 'مطلوب التحقق بخطوتين. يرجى إدخال رمز التحقق.',
-                setup_mfa: 'إعداد التحقق بخطوتين',
-                error_credentials: 'بيانات اعتماد غير صالحة',
-                error_otp_required: 'مطلوب رمز التحقق',
-                error_otp_invalid: 'رمز التحقق غير صحيح',
-                error_user_not_found: 'المستخدم غير موجود',
-                error_required_fields: 'معرف المستخدم وكلمة المرور مطلوبان'
-            }
-        };
-        
-        function switchLanguage(lang) {
+        let translations = {};
+
+        async function loadTranslations(lang) {
             currentLanguage = lang;
             document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            const response = await fetch(`/locales/${lang}.json`);
+            translations = await response.json();
             updateTexts();
         }
-        
+
+        function switchLanguage(lang) {
+            loadTranslations(lang);
+        }
+
         function updateTexts() {
-            const t = translations[currentLanguage];
+            const t = translations;
             document.getElementById('login-title').textContent = t.login;
-            document.getElementById('user-id-label').textContent = t.user_id;
-            document.getElementById('password-label').textContent = t.password;
-            document.getElementById('otp-label').textContent = t.otp;
-            document.getElementById('login-btn').textContent = t.login_btn;
+            document.getElementById('user-id-label').textContent = t.user_id_label;
+            document.getElementById('password-label').textContent = t.password_label;
+            document.getElementById('otp-label').textContent = t.otp_label;
+            document.getElementById('login-btn').textContent = t.login_button;
             document.getElementById('mfa-text').textContent = t.mfa_required;
             document.getElementById('setup-mfa-btn').textContent = t.setup_mfa;
+            document.getElementById('otp').placeholder = t.otp_placeholder;
         }
         
         function showError(message) {
@@ -279,7 +256,7 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    showSuccess('Login successful!');
+                    showSuccess(translations.login_success);
                     setTimeout(() => {
                         window.location.href = result.redirect_url;
                     }, 1000);
@@ -288,18 +265,18 @@
                         mfaRequired = true;
                         document.getElementById('otp-group').style.display = 'block';
                         document.getElementById('mfa-section').classList.add('show');
-                        showError(translations[currentLanguage].error_otp_required);
+                        showError(translations.error_otp_required);
                     } else {
-                        showError(result.error || translations[currentLanguage].error_credentials);
+                        showError(result.error || translations.error_credentials);
                     }
                 }
             } catch (error) {
-                showError('Network error. Please try again.');
+                showError(translations.network_error);
             }
         });
-        
+
         // Initialize with English
-        updateTexts();
+        loadTranslations(currentLanguage);
     </script>
 </body>
-</html> 
+</html>
