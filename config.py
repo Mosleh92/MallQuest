@@ -39,6 +39,8 @@ class BaseConfig:
     DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///mall_gamification.db')
     DATABASE_PATH = os.getenv('DATABASE_PATH', 'mall_gamification.db')
     TENANT_CONFIG_PATH = os.getenv('TENANT_CONFIG_PATH', 'tenants.json')
+    SHARD_COUNT = int(os.getenv('SHARD_COUNT', '1'))
+    SHARD_STRATEGY = os.getenv('SHARD_STRATEGY', 'hash')
     
     # Redis Configuration (Optional)
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -146,7 +148,9 @@ class BaseConfig:
             'url': cls.DATABASE_URL,
             'path': cls.DATABASE_PATH,
             'testing': cls.TESTING,
-            'test_url': cls.TEST_DATABASE_URL
+            'test_url': cls.TEST_DATABASE_URL,
+            'shard_count': cls.SHARD_COUNT,
+            'shard_strategy': cls.SHARD_STRATEGY,
         }
         if tenant_domain:
             tenant = cls.get_tenant(tenant_domain)

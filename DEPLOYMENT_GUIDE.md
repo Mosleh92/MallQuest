@@ -60,9 +60,11 @@ createdb mall_gamification_shard0
 # Run migrations across shards
 alembic upgrade head
 ```
-Set `SHARD_COUNT` in your environment to control how many databases are
-created. The application uses a hash of `user_id` to route queries to the
-appropriate shard.
+Set `SHARD_COUNT` and optional `SHARD_STRATEGY` (defaults to `hash`) in your
+environment to control how many databases are created and how keys map to
+shards. The application uses a hash of `user_id` by default. When using
+`docker-compose` the included `scripts/init-shards.sh` script will create the
+required databases automatically.
 
 ### 4. Start Application
 ```bash
@@ -109,9 +111,10 @@ system.create_test_data()
 print('Test data created successfully')
 "
 ```
-Set the `SHARD_COUNT` environment variable before running migrations if more
-than one shard is required. The application uses a hash of `user_id` for shard
-selection.
+Set the `SHARD_COUNT` and optional `SHARD_STRATEGY` environment variables
+before running migrations if more than one shard is required. The application
+defaults to a hash of `user_id` for shard selection. When using
+`docker-compose`, shards are created automatically based on `SHARD_COUNT`.
 
 ### Step 3: Run Tests
 ```bash
