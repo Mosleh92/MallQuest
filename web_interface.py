@@ -2,6 +2,7 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
 from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
+from coin_duel import CoinDuelManager
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
 import json
@@ -25,6 +26,7 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+coin_duel_manager = CoinDuelManager(mall_system)
 
 # -----------------------------
 # AUTHENTICATION ROUTES
@@ -252,10 +254,10 @@ def player_dashboard(user_id):
     
     user.login()
     dashboard_data = mall_system.get_user_dashboard(user_id)
-    
-    return render_template('player_dashboard.html', 
-                         user=user, 
-                         dashboard=dashboard_data)
+    return render_template('player_dashboard.html',
+                         user=user,
+                         dashboard=dashboard_data,
+                         duels=coin_duel_manager.get_user_duels(user_id))
 
 @app.route('/admin')
 def admin_dashboard():
@@ -288,9 +290,68 @@ def customer_service_dashboard():
     # Check authentication
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     dashboard_data = mall_system.get_customer_service_dashboard()
     return render_template('customer_service_dashboard.html', dashboard=dashboard_data)
+
+# -----------------------------
+# COIN DUEL ENDPOINTS
+# -----------------------------
+
+@app.route('/duel/start', methods=['POST'])
+def duel_start():
+    """Start a coin duel with another player."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    data = request.get_json() if request.is_json else request.form
+    opponent_id = data.get('opponent_id')
+    if not opponent_id:
+        return jsonify({'error': 'Opponent ID required'}), 400
+    duel_id = coin_duel_manager.start_duel(session['user_id'], opponent_id)
+    return jsonify({'duel_id': duel_id})
+
+@app.route('/duel/update', methods=['POST'])
+def duel_update():
+    """Update score for current user in a duel."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    data = request.get_json() if request.is_json else request.form
+    duel_id = data.get('duel_id')
+    score = data.get('score')
+    if duel_id is None or score is None:
+        return jsonify({'error': 'Duel ID and score required'}), 400
+    try:
+        score = int(score)
+    except ValueError:
+        return jsonify({'error': 'Score must be integer'}), 400
+    success = coin_duel_manager.update_score(duel_id, session['user_id'], score)
+    if not success:
+        return jsonify({'error': 'Invalid duel'}), 404
+    return jsonify({'success': True})
+
+@app.route('/duel/finish', methods=['POST'])
+def duel_finish():
+    """Conclude a duel and determine the winner."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    data = request.get_json() if request.is_json else request.form
+    duel_id = data.get('duel_id')
+    if not duel_id:
+        return jsonify({'error': 'Duel ID required'}), 400
+    result = coin_duel_manager.conclude_duel(duel_id)
+    if not result:
+        return jsonify({'error': 'Invalid duel'}), 404
+    return jsonify(result)
+
+@app.route('/duel/status/<duel_id>')
+def duel_status(duel_id):
+    """Get current status of a duel."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    duel = coin_duel_manager.get_duel(duel_id)
+    if not duel:
+        return jsonify({'error': 'Duel not found'}), 404
+    return jsonify(duel)
 
 # -----------------------------
 # API ENDPOINTS
