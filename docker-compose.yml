@@ -12,8 +12,9 @@ services:
     environment:
       - FLASK_ENV=production
       - FLASK_APP=web_interface.py
-      - DATABASE_URL=postgresql://mall_user:mall_password@db:5432/mall_gamification
+    - DATABASE_URL=postgresql://mall_user:mall_password@db:5432/mall_gamification
       - SHARD_COUNT=1
+      - SHARD_STRATEGY=hash
       - REDIS_URL=redis://redis:6379/0
       - REDIS_ENABLED=true
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
@@ -62,9 +63,10 @@ services:
       - POSTGRES_USER=mall_user
       - POSTGRES_PASSWORD=mall_password
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      - SHARD_COUNT=1
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/init-shards.sh:/docker-entrypoint-initdb.d/init-shards.sh
     ports:
       - "5432:5432"
     restart: unless-stopped

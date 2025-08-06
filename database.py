@@ -49,9 +49,23 @@ class Receipt(Base):
 class MallDatabase:
     """Database manager using SQLAlchemy with shard routing."""
 
-    def __init__(self, dsn: Optional[str] = None, shard_count: int = 1):
+    def __init__(self, dsn: Optional[str] = None, shard_count: Optional[int] = None, shard_strategy: Optional[str] = None):
+        """Initialize the database layer.
+
+        Parameters
+        ----------
+        dsn: str, optional
+            Base SQLAlchemy DSN. If omitted, uses ``DATABASE_URL`` env var and
+            falls back to SQLite.
+        shard_count: int, optional
+            Number of database shards. Defaults to ``SHARD_COUNT`` env var or 1.
+        shard_strategy: str, optional
+            Strategy name used for shard mapping. Currently only ``"hash"`` is
+            supported. Defaults to ``SHARD_STRATEGY`` env var or ``"hash"``.
+        """
         self.dsn = dsn or os.getenv("DATABASE_URL", "sqlite:///mall_gamification.db")
-        self.shard_count = shard_count
+        self.shard_count = shard_count or int(os.getenv("SHARD_COUNT", "1"))
+        self.shard_strategy = shard_strategy or os.getenv("SHARD_STRATEGY", "hash")
         self.engines: List[Engine] = []
         self.sessions: List[sessionmaker] = []
 
@@ -72,8 +86,11 @@ class MallDatabase:
         return str(url)
 
     def _shard_for_key(self, key: str) -> int:
-        digest = hashlib.sha256(key.encode()).hexdigest()
-        return int(digest, 16) % self.shard_count
+        """Return shard index for the given key based on configured strategy."""
+        if self.shard_strategy == "hash":
+            digest = hashlib.sha256(key.encode()).hexdigest()
+            return int(digest, 16) % self.shard_count
+        raise ValueError(f"Unsupported shard strategy: {self.shard_strategy}")
 
     def _session_for_key(self, key: str) -> Session:
         index = self._shard_for_key(key)
