@@ -1,0 +1,53 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MallQuest\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "user_id_password_required"
+msgstr "مطلوب معرف المستخدم وكلمة المرور"
+
+msgid "user_not_found"
+msgstr "المستخدم غير موجود"
+
+msgid "invalid_credentials"
+msgstr "بيانات اعتماد غير صالحة"
+
+msgid "otp_required"
+msgstr "مطلوب رمز OTP"
+
+msgid "invalid_otp"
+msgstr "رمز OTP غير صالح"
+
+msgid "mfa_setup_session_expired"
+msgstr "انتهت جلسة إعداد MFA"
+
+msgid "failed_to_save_mfa_settings"
+msgstr "فشل في حفظ إعدادات MFA"
+
+msgid "mfa_enabled_success"
+msgstr "تم تمكين MFA بنجاح"
+
+msgid "user_id_required"
+msgstr "مطلوب معرف المستخدم"
+
+msgid "mfa_not_enabled"
+msgstr "لم يتم تمكين MFA لهذا المستخدم"
+
+msgid "otp_or_backup_required"
+msgstr "مطلوب رمز OTP أو رمز احتياطي"
+
+msgid "mfa_verification_success"
+msgstr "تم التحقق من MFA بنجاح"
+
+msgid "authentication_required"
+msgstr "المصادقة مطلوبة"
+
+msgid "failed_to_disable_mfa"
+msgstr "فشل في تعطيل MFA"
+
+msgid "mfa_disabled_success"
+msgstr "تم تعطيل MFA بنجاح"
+

@@ -1,6 +1,7 @@
 # Web Interface for Mall Gamification AI Control Panel
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
 from flask_wtf.csrf import CSRFProtect
+from flask_babel import Babel, gettext as _
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
@@ -14,6 +15,17 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = 'deerfields_mall_secret_key_2024'
+
+app.config['BABEL_DEFAULT_LOCALE'] = 'en'
+app.config['BABEL_SUPPORTED_LOCALES'] = ['en', 'ar']
+app.config['BABEL_TRANSLATION_DIRECTORIES'] = 'translations'
+
+
+def get_locale():
+    return session.get('language', 'en')
+
+
+babel = Babel(app, locale_selector=get_locale)
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
@@ -52,16 +64,16 @@ def login():
     
     # Validate input
     if not user_id or not password:
-        return jsonify({'error': 'User ID and password are required'}), 400
+        return jsonify({'error': _('user_id_password_required')}), 400
     
     # Get user
     user = mall_system.get_user(user_id)
     if not user:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': _('user_not_found')}), 404
     
     # Verify password (simplified for demo - in production use proper password hashing)
     if password != "demo123":  # Replace with proper password verification
-        return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify({'error': _('invalid_credentials')}), 401
     
     # Check if MFA is enabled for this user
     mfa_settings = secure_db.get_mfa_settings(user_id)
@@ -69,13 +81,13 @@ def login():
     if mfa_settings and mfa_settings['mfa_enabled']:
         # MFA is enabled, verify OTP
         if not otp:
-            return jsonify({'error': 'OTP required', 'mfa_required': True}), 401
+            return jsonify({'error': _('otp_required'), 'mfa_required': True}), 401
         
         # Verify OTP
         if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
             # Log failed attempt
             secure_db.log_mfa_attempt(user_id, 'otp', False)
-            return jsonify({'error': 'کد OTP نامعتبر', 'mfa_required': True}), 403
+            return jsonify({'error': _('invalid_otp'), 'mfa_required': True}), 403
         
         # Log successful attempt
         secure_db.log_mfa_attempt(user_id, 'otp', True)
@@ -138,15 +150,15 @@ def mfa_setup():
     otp = data.get('otp')
     
     if not otp:
-        return jsonify({'error': 'OTP is required'}), 400
+        return jsonify({'error': _('otp_required')}), 400
     
     mfa_setup_data = session.get('mfa_setup')
     if not mfa_setup_data:
-        return jsonify({'error': 'MFA setup session expired'}), 400
+        return jsonify({'error': _('mfa_setup_session_expired')}), 400
     
     # Verify OTP
     if not security_manager.verify_otp(mfa_setup_data['secret'], otp):
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
+        return jsonify({'error': _('invalid_otp')}), 403
     
     # Save MFA settings
     if secure_db.save_mfa_settings(user_id, mfa_setup_data['secret'], mfa_setup_data['backup_codes']):
@@ -159,9 +171,9 @@ def mfa_setup():
         # Log security event
         secure_db.log_security_event(user_id, 'mfa_enabled', 'MFA setup completed')
         
-        return jsonify({'success': True, 'message': 'MFA enabled successfully'})
+        return jsonify({'success': True, 'message': _('mfa_enabled_success')})
     else:
-        return jsonify({'error': 'Failed to save MFA settings'}), 500
+        return jsonify({'error': _('failed_to_save_mfa_settings')}), 500
 
 @app.route('/mfa/verify', methods=['POST'])
 def mfa_verify():
@@ -172,12 +184,12 @@ def mfa_verify():
     backup_code = data.get('backup_code')
     
     if not user_id:
-        return jsonify({'error': 'User ID is required'}), 400
+        return jsonify({'error': _('user_id_required')}), 400
     
     # Get MFA settings
     mfa_settings = secure_db.get_mfa_settings(user_id)
     if not mfa_settings or not mfa_settings['mfa_enabled']:
-        return jsonify({'error': 'MFA not enabled for this user'}), 400
+        return jsonify({'error': _('mfa_not_enabled')}), 400
     
     success = False
     attempt_type = None
@@ -194,21 +206,21 @@ def mfa_verify():
             secure_db.update_backup_codes(user_id, mfa_settings['backup_codes'])
         attempt_type = 'backup'
     else:
-        return jsonify({'error': 'OTP or backup code is required'}), 400
+        return jsonify({'error': _('otp_or_backup_required')}), 400
     
     # Log attempt
     secure_db.log_mfa_attempt(user_id, attempt_type, success)
     
     if success:
-        return jsonify({'success': True, 'message': 'MFA verification successful'})
+        return jsonify({'success': True, 'message': _('mfa_verification_success')})
     else:
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
+        return jsonify({'error': _('invalid_otp')}), 403
 
 @app.route('/mfa/disable', methods=['POST'])
 def mfa_disable():
     """Disable MFA for user"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Authentication required'}), 401
+        return jsonify({'error': _('authentication_required')}), 401
     
     user_id = session['user_id']
     data = request.get_json() if request.is_json else request.form
@@ -217,18 +229,18 @@ def mfa_disable():
     # Get MFA settings
     mfa_settings = secure_db.get_mfa_settings(user_id)
     if not mfa_settings or not mfa_settings['mfa_enabled']:
-        return jsonify({'error': 'MFA not enabled for this user'}), 400
+        return jsonify({'error': _('mfa_not_enabled')}), 400
     
     # Verify OTP before disabling
     if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
+        return jsonify({'error': _('invalid_otp')}), 403
     
     # Disable MFA
     if secure_db.disable_mfa(user_id):
         secure_db.log_security_event(user_id, 'mfa_disabled', 'MFA disabled by user')
-        return jsonify({'success': True, 'message': 'MFA disabled successfully'})
+        return jsonify({'success': True, 'message': _('mfa_disabled_success')})
     else:
-        return jsonify({'error': 'Failed to disable MFA'}), 500
+        return jsonify({'error': _('failed_to_disable_mfa')}), 500
 
 # -----------------------------
 # ROUTES FOR DIFFERENT DASHBOARDS
@@ -301,7 +313,7 @@ def api_submit_receipt():
     """API endpoint for receipt submission"""
     # Check authentication
     if 'user_id' not in session:
-        return jsonify({'error': 'Authentication required'}), 401
+        return jsonify({'error': _('authentication_required')}), 401
     
     # Rate limiting
     if not secure_db.check_rate_limit(request.remote_addr, 'submit_receipt', 10, 60):
@@ -454,4 +466,4 @@ def health_check():
         }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=5000)
