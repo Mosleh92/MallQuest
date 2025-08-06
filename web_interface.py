@@ -5,9 +5,13 @@ from mall_gamification_system import MallGamificationSystem, User
 from coin_duel import CoinDuelManager
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
+ codex/implement-real-time-leaderboard-service
+from leaderboard_service import LeaderboardService
+
  codex/develop-milestone-rewards-system
 from milestone_rewards import MilestoneRewards
 from i18n import translator, get_locale
+ main
  main
 import json
 import logging
@@ -31,6 +35,9 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+ codex/implement-real-time-leaderboard-service
+leaderboard_service = LeaderboardService(mall_system)
+
 <codex/add-coin-duel-functionality-to-project
 coin_duel_manager = CoinDuelManager(mall_system)
 
@@ -53,6 +60,7 @@ def serve_locale(lang):
     session['lang'] = lang
     return jsonify(data)
 main
+ main
 
 # -----------------------------
 # AUTHENTICATION ROUTES
@@ -512,6 +520,21 @@ def api_claim_milestone():
     return jsonify({'error': 'Milestone not available'}), 400
 
 # -----------------------------
+# LEADERBOARD STREAMING
+# -----------------------------
+
+@app.route('/leaderboard')
+def leaderboard_view():
+    """Render the real-time leaderboard view."""
+    return render_template('leaderboard.html')
+
+
+@app.route('/stream/leaderboard/<leaderboard_type>')
+def stream_leaderboard(leaderboard_type):
+    """Stream leaderboard updates using Server-Sent Events."""
+    return leaderboard_service.stream(leaderboard_type)
+
+# -----------------------------
 # LANGUAGE SWITCHING
 # -----------------------------
 
@@ -581,4 +604,4 @@ def health_check():
         }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=5000)
