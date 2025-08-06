@@ -18,6 +18,12 @@ import random
 import time
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
+import logging
+try:
+    import pygame
+except ImportError:
+    pygame = None
+logger = logging.getLogger(__name__)
 import math
 
 # Proper error handling for missing dependencies
@@ -980,12 +986,18 @@ class GraphicsEngine:
         print(f"[3D GRAPHICS] Login streak rewards enabled: {days_required} days for {bonus_coins} coins")
         return {"status": "success", "streak_config": streak_config}
     
-    def play_sound(self, sound_file: str):
-        """Play sound effect for rewards and interactions"""
+    def play_sound(self, sound_file: str, volume: float = 0.8, loop: bool = False):
+        """Play sound effect for rewards and interactions.
+
+        Args:
+            sound_file: Path to the audio file.
+            volume: Playback volume between 0.0 and 1.0.
+            loop: Whether the sound should loop continuously.
+        """
         sound_config = {
             "file": sound_file,
-            "volume": 0.8,
-            "loop": False,
+            "volume": volume,
+            "loop": loop,
             "category": self._get_sound_category(sound_file),
             "effects": {
                 "fade_in": True,
@@ -994,14 +1006,20 @@ class GraphicsEngine:
             },
             "played_at": datetime.now()
         }
-        
+
         self.sound_system[sound_file] = sound_config
-        
-        # Trigger sound effect
-        self._trigger_sound_effect(sound_file)
-        
-        print(f"[3D GRAPHICS] Sound played: {sound_file}")
-        return {"status": "success", "sound": sound_config}
+
+        # Trigger sound effect using audio library
+        success = self._trigger_sound_effect(sound_file, volume=volume, loop=loop)
+
+        if success:
+            logger.info("[3D GRAPHICS] Sound played: %s", sound_file)
+            status = "success"
+        else:
+            logger.error("[3D GRAPHICS] Failed to play sound: %s", sound_file)
+            status = "error"
+
+        return {"status": status, "sound": sound_config}
     
     def create_daily_quest(self, title: str, reward: int = 15):
         """Create daily quest with specific reward"""
@@ -1179,20 +1197,26 @@ class GraphicsEngine:
         else:
             return "general"
     
-    def _trigger_sound_effect(self, sound_file: str):
-        """Trigger sound effect"""
+    def _trigger_sound_effect(self, sound_file: str, volume: float = 0.8, loop: bool = False) -> bool:
+        """Trigger sound effect using pygame mixer."""
+        if pygame is None:
+            logger.error("pygame is not installed; cannot play sound: %s", sound_file)
+            return False
         category = self._get_sound_category(sound_file)
-        
-        if category == "rewards":
-            print(f"[3D GRAPHICS] 🔊 Playing reward sound: {sound_file}")
-        elif category == "quests":
-            print(f"[3D GRAPHICS] 🎯 Playing quest sound: {sound_file}")
-        elif category == "achievements":
-            print(f"[3D GRAPHICS] 🏆 Playing achievement sound: {sound_file}")
-        elif category == "brands":
-            print(f"[3D GRAPHICS] 🏛️ Playing brand sound: {sound_file}")
-        else:
-            print(f"[3D GRAPHICS] 🔊 Playing general sound: {sound_file}")
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+            sound = pygame.mixer.Sound(sound_file)
+            sound.set_volume(volume)
+            loops = -1 if loop else 0
+            sound.play(loops=loops)
+            logger.info("[3D GRAPHICS] %s sound: %s", category, sound_file)
+            return True
+        except FileNotFoundError:
+            logger.error("Sound file not found: %s", sound_file)
+        except Exception as e:
+            logger.error("Error playing sound %s: %s", sound_file, e)
+        return False
     
     def _get_tomorrow_midnight(self) -> datetime:
         """Get tomorrow at midnight for quest expiration"""
@@ -2428,9 +2452,9 @@ def enable_login_streak_rewards(days_required=5, bonus_coins=20):
     """Enable login streak rewards for continuous presence"""
     return graphics_controller.graphics_engine.enable_login_streak_rewards(days_required, bonus_coins)
 
-def play_sound(sound_file):
+def play_sound(sound_file, volume=0.8, loop=False):
     """Play sound effect for rewards and interactions"""
-    return graphics_controller.graphics_engine.play_sound(sound_file)
+    return graphics_controller.graphics_engine.play_sound(sound_file, volume, loop)
 
 def create_daily_quest(title, reward=15):
     """Create daily quest with specific reward"""
