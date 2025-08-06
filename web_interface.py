@@ -4,6 +4,7 @@ from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
+from leaderboard_service import LeaderboardService
 import json
 import logging
 from datetime import datetime
@@ -25,6 +26,7 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+leaderboard_service = LeaderboardService(mall_system)
 
 # -----------------------------
 # AUTHENTICATION ROUTES
@@ -386,6 +388,21 @@ def api_respond_ticket():
     return jsonify({'success': True})
 
 # -----------------------------
+# LEADERBOARD STREAMING
+# -----------------------------
+
+@app.route('/leaderboard')
+def leaderboard_view():
+    """Render the real-time leaderboard view."""
+    return render_template('leaderboard.html')
+
+
+@app.route('/stream/leaderboard/<leaderboard_type>')
+def stream_leaderboard(leaderboard_type):
+    """Stream leaderboard updates using Server-Sent Events."""
+    return leaderboard_service.stream(leaderboard_type)
+
+# -----------------------------
 # LANGUAGE SWITCHING
 # -----------------------------
 
@@ -454,4 +471,4 @@ def health_check():
         }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=5000)
