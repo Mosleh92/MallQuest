@@ -1,23 +1,125 @@
+ codex/create-coin-duel-game-logic
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from mall_gamification_system import MallGamificationSystem
+from coin_duel import CoinDuelManager
+=======
 # Web Interface for Mall Gamification AI Control Panel
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort, g
 from flask_wtf.csrf import CSRFProtect
-from mall_gamification_system import MallGamificationSystem, User
-from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
+from flask_babel import Babel
+ codex/refactor-for-tenant-database-schemas
+from mall_gamification_system import MallGamificationSystem, User, admin_remove_receipt
+
+from mall_gamification_system import MallGamificationSystem
+ main
+from coin_duel import CoinDuelManager
+from security_module import (
+    SecurityManager,
+    SecureDatabase,
+    InputValidator,
+    RateLimiter,
+    log_security_event,
+)
 from performance_module import PerformanceManager, record_performance_event
+ codex/add-discounts-service-and-route
 from discounts_service import DiscountsService
+=======
+ codex/implement-wheel-of-fortune-features
+from wheel_of_fortune import WheelOfFortune
+=======
+ codex/update-password-handling-in-web-interface
+from werkzeug.security import check_password_hash
+from database import db
+=======
+ codex/refactor-for-tenant-database-schemas
+=======
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+from voucher_system import voucher_system  # noqa: F401
+from leaderboard_service import LeaderboardService
+from milestone_rewards import MilestoneRewards
+from i18n import translator
+
+ main
+from voucher_system import voucher_system
+from leaderboard_service import LeaderboardService
+from database import MallDatabase
+from werkzeug.security import check_password_hash
+
+from milestone_rewards import MilestoneRewards
+from i18n import translator, get_locale
+ codex/refactor-for-tenant-database-schemas
+from config import BaseConfig
+=======
+ main
+ main
+ main
+ main
 import json
+ main
 import logging
+ codex/refactor-for-tenant-database-support
 from datetime import datetime
+from config import TenantManager, BaseConfig
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+=======
+ main
+import os
+ main
 
 app = Flask(__name__)
-app.secret_key = 'deerfields_mall_secret_key_2024'
+ codex/create-coin-duel-game-logic
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret')
+
+# Core systems
+mall_system = MallGamificationSystem()
+=======
+# Secret key must be provided via environment variable for session security
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
+ codex/refactor-for-tenant-database-schemas
+app.config['BABEL_DEFAULT_LOCALE'] = 'en'
+app.config['BABEL_SUPPORTED_LOCALES'] = ['en', 'ar']
+app.config['BABEL_TRANSLATION_DIRECTORIES'] = 'translations'
+BaseConfig.load_tenants()
+=======
+app.config["BABEL_DEFAULT_LOCALE"] = "en"
+app.config["BABEL_SUPPORTED_LOCALES"] = ["en", "ar"]
+app.config["BABEL_TRANSLATION_DIRECTORIES"] = "translations"
+
+ main
+
+def get_locale():
+    return session.get("language", "en")
+
+
+babel = Babel(app, locale_selector=get_locale)
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
+
+# Tenant-aware middleware
+@app.before_request
+def load_tenant():
+    """Identify tenant from request host and apply branding."""
+    host = request.host.split(':')[0]
+    tenant = BaseConfig.get_tenant(host)
+    if tenant:
+        g.tenant = tenant
+        g.branding = {
+            'name': tenant.name,
+            'theme': tenant.theme,
+            'logo': tenant.logo
+        }
+    else:
+        g.branding = {
+            'name': BaseConfig.MALL_NAME,
+            'theme': 'default',
+            'logo': ''
+        }
+
 
 # Initialize the mall system and security components
 mall_system = MallGamificationSystem()
@@ -26,221 +128,521 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+ codex/add-discounts-service-and-route
 discounts_service = DiscountsService()
+=======
+leaderboard_service = LeaderboardService(mall_system)
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+=======
+mall_db = MallDatabase()
+
+ codex/implement-wheel-of-fortune-features
+# Initialize Wheel of Fortune with default prizes
+wheel = WheelOfFortune(
+    mall_system,
+    prizes={
+        "small_coins": {
+            "probability": 0.6,
+            "inventory": 100,
+            "reward": {"coins": 5},
+        },
+        "medium_coins": {
+            "probability": 0.3,
+            "inventory": 50,
+            "reward": {"coins": 20},
+        },
+        "jackpot": {
+            "probability": 0.1,
+            "inventory": 10,
+            "reward": {"coins": 100},
+        },
+    },
+)
+
+# Tenant-specific system caches
+tenant_systems = {}
+tenant_dbs = {}
+
+
+@app.before_request
+def load_tenant():
+    """Middleware to load tenant configuration based on request domain."""
+    host = request.host.split(':')[0]
+    tenant = TenantManager.get_tenant(host)
+    if not tenant:
+        abort(404)
+
+    g.tenant = tenant
+
+    global mall_system, secure_db
+    if host not in tenant_systems:
+        tenant_systems[host] = MallGamificationSystem()
+        tenant_dbs[host] = SecureDatabase(tenant['schema'])
+    mall_system = tenant_systems[host]
+    secure_db = tenant_dbs[host]
+
+
+@app.context_processor
+def inject_tenant():
+    """Inject tenant branding into templates."""
+    tenant = getattr(g, 'tenant', {})
+    return {
+        'tenant_name': tenant.get('name', BaseConfig.MALL_NAME),
+        'tenant_theme': tenant.get('theme', 'default')
+    }
+ main
 
 # -----------------------------
 # AUTHENTICATION ROUTES
 # -----------------------------
+=======
+ codex/refactor-for-tenant-database-schemas
+=======
+ main
+ main
+ main
+coin_duel_manager = CoinDuelManager(mall_system)
+ ficjd7-codex/develop-milestone-rewards-system
 
-@app.route('/login', methods=['GET', 'POST'])
+ codex/create-coin-duel-game-logic
+
+@app.route('/')
+def index():
+    """Landing page."""
+    return render_template('index.html')
+=======
+milestone_rewards = MilestoneRewards("milestone_rewards.db")
+=======
+milestone_rewards = MilestoneRewards()
+ main
+
+
+@app.context_processor
+def inject_translations():
+    lang = session.get('lang', translator.default_locale)
+    return {'t': lambda key: translator.gettext(key, lang)}
+@app.context_processor
+def inject_branding():
+    return {'branding': getattr(g, 'branding', {})}
+=======
+    lang = get_locale()
+    return {"t": lambda key: translator.gettext(key, lang)}
+ main
+
+
+@app.route("/locales/<lang>.json")
+def serve_locale(lang):
+    """Return localization dictionary for client-side use"""
+    data = translator.translations.get(lang)
+    if not data:
+        lang = translator.default_locale
+        data = translator.translations.get(lang, {})
+    session["lang"] = lang
+    return jsonify(data)
+ codex/refactor-for-tenant-database-schemas
+
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+
+
+ main
+ main
+ main
+ main
+
+
+ codex/create-coin-duel-game-logic
+@app.route('/login', methods=['POST'])
+def login():
+    """Simple login to establish a session."""
+    data = request.get_json() or request.form
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'user_id required'}), 400
+    mall_system.create_user(user_id, 'en')
+    session['user_id'] = user_id
+    return redirect(url_for('player_dashboard', user_id=user_id))
+
+
+
+@app.route("/login", methods=["GET", "POST"])
 @rate_limiter.limit(max_requests=5, window_seconds=300)
 def login():
     """Login page with MFA support"""
     start_time = datetime.now()
-    
-    if request.method == 'GET':
+
+    if request.method == "GET":
         response_time = (datetime.now() - start_time).total_seconds()
-        record_performance_event('login_page_load', response_time)
-        return render_template('login.html')
-    
-    # Handle login form submission
+        record_performance_event("login_page_load", response_time)
+        return render_template("login.html")
+
     data = request.get_json() if request.is_json else request.form
-    user_id = data.get('user_id')
-    password = data.get('password')
-    otp = data.get('otp')
-    
-    # Record performance
+    user_id = data.get("user_id")
+    password = data.get("password")
+    otp = data.get("otp")
+
     response_time = (datetime.now() - start_time).total_seconds()
-    
-    # Validate input
+
     if not user_id or not password:
-        return jsonify({'error': 'User ID and password are required'}), 400
+ codex/refactor-for-tenant-database-schemas
+        return jsonify({'error': translator.gettext('user_password_required', lang)}), 400
     
+ codex/update-password-handling-in-web-interface
+    # Get user credentials from database
+    user_record = db.get_user(user_id)
+    if not user_record:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Verify password against stored hash
+    stored_hash = user_record.get('password_hash')
+    if not stored_hash or not check_password_hash(stored_hash, password):
+        return jsonify({'error': 'Invalid credentials'}), 401
     # Get user
     user = mall_system.get_user(user_id)
     if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    # Verify password (simplified for demo - in production use proper password hashing)
+
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+        return jsonify({"error": _("user_id_password_required")}), 400
+
+    user = mall_system.get_user(user_id)
+    if not user:
+        return jsonify({"error": _("user_not_found")}), 404
+
     if password != "demo123":  # Replace with proper password verification
-        return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify({"error": _("invalid_credentials")}), 401
+
+
+        return jsonify({'error': translator.gettext('user_password_required', lang)}), 400
+
+    # Fetch user credentials from database
+    user_record = mall_db.get_user(user_id)
+    if not user_record:
+ main
+        return jsonify({'error': translator.gettext('user_not_found', lang)}), 404
+
+    if not user_record.get('password_hash') or not check_password_hash(user_record['password_hash'], password):
+        return jsonify({'error': translator.gettext('invalid_credentials', lang)}), 401
+ codex/refactor-for-tenant-database-schemas
+=======
+ main
+
+    # Ensure user exists in mall system
+    user = mall_system.get_user(user_id)
+    if not user:
+ codex/update-password-handling-in-web-interface
+        user = User(user_id)
+        mall_system.users[user_id] = user
+=======
+        user = mall_system.create_user(user_id, lang)
+ main
+ main
     
     # Check if MFA is enabled for this user
+ main
     mfa_settings = secure_db.get_mfa_settings(user_id)
-    
-    if mfa_settings and mfa_settings['mfa_enabled']:
-        # MFA is enabled, verify OTP
+
+    if mfa_settings and mfa_settings["mfa_enabled"]:
         if not otp:
-            return jsonify({'error': 'OTP required', 'mfa_required': True}), 401
+ codex/refactor-for-tenant-database-schemas
+=======
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+            return jsonify({"error": _("otp_required"), "mfa_required": True}), 401
+
+        if not security_manager.verify_otp(mfa_settings["mfa_secret"], otp):
+            secure_db.log_mfa_attempt(user_id, "otp", False)
+            return jsonify({"error": _("invalid_otp"), "mfa_required": True}), 403
+
+        secure_db.log_mfa_attempt(user_id, "otp", True)
+
+
+ main
+            return jsonify({'error': translator.gettext('otp_required', lang), 'mfa_required': True}), 401
         
         # Verify OTP
         if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
             # Log failed attempt
             secure_db.log_mfa_attempt(user_id, 'otp', False)
-            return jsonify({'error': 'کد OTP نامعتبر', 'mfa_required': True}), 403
+            return jsonify({'error': translator.gettext('otp_invalid', lang), 'mfa_required': True}), 403
         
         # Log successful attempt
         secure_db.log_mfa_attempt(user_id, 'otp', True)
     
     # Login successful
+ main
     user.login()
-    session['user_id'] = user_id
-    session['authenticated'] = True
-    
-    # Log security event
-    secure_db.log_security_event(user_id, 'login_success', f'Login from {request.remote_addr}')
-    log_security_event('login_success', {'user_id': user_id, 'ip': request.remote_addr})
-    
-    # Record performance
-    record_performance_event('login_success', response_time)
-    
-    return jsonify({
-        'success': True,
-        'user_id': user_id,
-        'redirect_url': url_for('player_dashboard', user_id=user_id)
-    })
+    session["user_id"] = user_id
+    session["authenticated"] = True
 
-@app.route('/logout')
+    secure_db.log_security_event(user_id, "login_success", f"Login from {request.remote_addr}")
+    log_security_event("login_success", {"user_id": user_id, "ip": request.remote_addr})
+
+    record_performance_event("login_success", response_time)
+
+    return jsonify(
+        {
+            "success": True,
+            "user_id": user_id,
+            "redirect_url": url_for("player_dashboard", user_id=user_id),
+        }
+    )
+
+
+@app.route("/logout")
 def logout():
     """Logout user"""
-    if 'user_id' in session:
-        user_id = session['user_id']
-        secure_db.log_security_event(user_id, 'logout', f'Logout from {request.remote_addr}')
-    
-    session.clear()
-    return redirect(url_for('index'))
+    if "user_id" in session:
+        user_id = session["user_id"]
+        secure_db.log_security_event(user_id, "logout", f"Logout from {request.remote_addr}")
 
-@app.route('/mfa/setup', methods=['GET', 'POST'])
+    session.clear()
+    return redirect(url_for("index"))
+
+
+@app.route("/mfa/setup", methods=["GET", "POST"])
 def mfa_setup():
     """Setup MFA for user"""
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    user_id = session['user_id']
-    
-    if request.method == 'GET':
-        # Generate new MFA secret
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+    user_id = session["user_id"]
+
+    if request.method == "GET":
         mfa_secret = security_manager.generate_mfa_secret()
         qr_code_url = security_manager.generate_mfa_qr_code(user_id, mfa_secret)
         backup_codes = security_manager.generate_backup_codes()
-        
-        # Store temporarily in session
+
+        session["mfa_setup"] = {
+            "secret": mfa_secret,
+            "backup_codes": backup_codes,
+        }
+
+        return render_template(
+            "mfa_setup.html",
+            qr_code_url=qr_code_url,
+            backup_codes=backup_codes,
+            user_id=user_id,
+        )
+
+    data = request.get_json() if request.is_json else request.form
+    otp = data.get("otp")
+
+    if not otp:
+        return jsonify({"error": _("otp_required")}), 400
+
+    mfa_setup_data = session.get("mfa_setup")
+    if not mfa_setup_data:
+        return jsonify({"error": _("mfa_setup_session_expired")}), 400
+
+    if not security_manager.verify_otp(mfa_setup_data["secret"], otp):
+        return jsonify({"error": _("invalid_otp")}), 403
+
+    if secure_db.save_mfa_settings(
+        user_id, mfa_setup_data["secret"], mfa_setup_data["backup_codes"]
+    ):
+        secure_db.enable_mfa(user_id)
+        session.pop("mfa_setup", None)
+        secure_db.log_security_event(user_id, "mfa_enabled", "MFA setup completed")
+        return jsonify({"success": True, "message": _("mfa_enabled_success")})
+    else:
+        return jsonify({"error": _("failed_to_save_mfa_settings")}), 500
+
+    user_id = session['user_id']
+    lang = get_locale()
+
+    if request.method == 'GET':
+        mfa_secret = security_manager.generate_mfa_secret()
+        qr_code_url = security_manager.generate_mfa_qr_code(user_id, mfa_secret)
+        backup_codes = security_manager.generate_backup_codes()
         session['mfa_setup'] = {
             'secret': mfa_secret,
             'backup_codes': backup_codes
         }
-        
-        return render_template('mfa_setup.html', 
-                             qr_code_url=qr_code_url, 
-                             backup_codes=backup_codes,
-                             user_id=user_id)
-    
-    # Handle MFA setup confirmation
+        return render_template('mfa_setup.html', qr_code_url=qr_code_url, backup_codes=backup_codes, user_id=user_id)
+
     data = request.get_json() if request.is_json else request.form
     otp = data.get('otp')
-    
+
     if not otp:
-        return jsonify({'error': 'OTP is required'}), 400
-    
+        return jsonify({'error': translator.gettext('otp_required', lang)}), 400
+
     mfa_setup_data = session.get('mfa_setup')
     if not mfa_setup_data:
-        return jsonify({'error': 'MFA setup session expired'}), 400
-    
+        return jsonify({'error': translator.gettext('mfa_setup_session_expired', lang)}), 400
+
+ codex/refactor-for-tenant-database-schemas
     # Verify OTP
     if not security_manager.verify_otp(mfa_setup_data['secret'], otp):
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
-    
-    # Save MFA settings
-    if secure_db.save_mfa_settings(user_id, mfa_setup_data['secret'], mfa_setup_data['backup_codes']):
-        # Enable MFA
-        secure_db.enable_mfa(user_id)
-        
-        # Clear setup session
-        session.pop('mfa_setup', None)
-        
-        # Log security event
-        secure_db.log_security_event(user_id, 'mfa_enabled', 'MFA setup completed')
-        
-        return jsonify({'success': True, 'message': 'MFA enabled successfully'})
-    else:
-        return jsonify({'error': 'Failed to save MFA settings'}), 500
+        return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
 
-@app.route('/mfa/verify', methods=['POST'])
+    # Save MFA settings
+
+    if not security_manager.verify_otp(mfa_setup_data['secret'], otp):
+        return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
+
+ main
+    if secure_db.save_mfa_settings(user_id, mfa_setup_data['secret'], mfa_setup_data['backup_codes']):
+        secure_db.enable_mfa(user_id)
+        session.pop('mfa_setup', None)
+        secure_db.log_security_event(user_id, 'mfa_enabled', 'MFA setup completed')
+ codex/refactor-for-tenant-database-schemas
+        
+
+ main
+        return jsonify({'success': True, 'message': translator.gettext('mfa_enabled_success', lang)})
+    else:
+        return jsonify({'error': translator.gettext('failed_save_mfa', lang)}), 500
+
+
+@app.route("/mfa/verify", methods=["POST"])
 def mfa_verify():
     """Verify MFA code"""
     data = request.get_json() if request.is_json else request.form
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+    user_id = data.get("user_id")
+    otp = data.get("otp")
+    backup_code = data.get("backup_code")
+
+    if not user_id:
+        return jsonify({"error": _("user_id_required")}), 400
+
+    mfa_settings = secure_db.get_mfa_settings(user_id)
+    if not mfa_settings or not mfa_settings["mfa_enabled"]:
+        return jsonify({"error": _("mfa_not_enabled")}), 400
+
     user_id = data.get('user_id')
     otp = data.get('otp')
     backup_code = data.get('backup_code')
-    
+
     if not user_id:
-        return jsonify({'error': 'User ID is required'}), 400
+        return jsonify({'error': translator.gettext('user_id_required', lang)}), 400
+ codex/refactor-for-tenant-database-schemas
     
     # Get MFA settings
     mfa_settings = secure_db.get_mfa_settings(user_id)
     if not mfa_settings or not mfa_settings['mfa_enabled']:
-        return jsonify({'error': 'MFA not enabled for this user'}), 400
+        return jsonify({'error': translator.gettext('mfa_not_enabled', lang)}), 400
     
+=======
+
+    mfa_settings = secure_db.get_mfa_settings(user_id)
+    if not mfa_settings or not mfa_settings['mfa_enabled']:
+        return jsonify({'error': translator.gettext('mfa_not_enabled', lang)}), 400
+ main
+
+ main
     success = False
     attempt_type = None
-    
+
     if otp:
-        # Verify OTP
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+        success = security_manager.verify_otp(mfa_settings["mfa_secret"], otp)
+        attempt_type = "otp"
+    elif backup_code:
+        success = security_manager.verify_backup_code(
+            mfa_settings["backup_codes"], backup_code
+        )
+        if success:
+            secure_db.update_backup_codes(user_id, mfa_settings["backup_codes"])
+        attempt_type = "backup"
+    else:
+        return jsonify({"error": _("otp_or_backup_required")}), 400
+
         success = security_manager.verify_otp(mfa_settings['mfa_secret'], otp)
         attempt_type = 'otp'
     elif backup_code:
-        # Verify backup code
         success = security_manager.verify_backup_code(mfa_settings['backup_codes'], backup_code)
         if success:
-            # Update backup codes in database
             secure_db.update_backup_codes(user_id, mfa_settings['backup_codes'])
         attempt_type = 'backup'
     else:
-        return jsonify({'error': 'OTP or backup code is required'}), 400
+        return jsonify({'error': translator.gettext('otp_or_backup_required', lang)}), 400
+ codex/refactor-for-tenant-database-schemas
     
     # Log attempt
-    secure_db.log_mfa_attempt(user_id, attempt_type, success)
-    
-    if success:
-        return jsonify({'success': True, 'message': 'MFA verification successful'})
-    else:
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
+=======
+ main
 
-@app.route('/mfa/disable', methods=['POST'])
+ main
+    secure_db.log_mfa_attempt(user_id, attempt_type, success)
+
+    if success:
+ codex/refactor-for-tenant-database-schemas
+=======
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+        return jsonify({"success": True, "message": _("mfa_verification_success")})
+    else:
+        return jsonify({"error": _("invalid_otp")}), 403
+=======
+ main
+        return jsonify({'success': True, 'message': translator.gettext('mfa_verify_success', lang)})
+    else:
+        return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
+
+
+@app.route("/mfa/disable", methods=["POST"])
 def mfa_disable():
     """Disable MFA for user"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Authentication required'}), 401
-    
-    user_id = session['user_id']
-    data = request.get_json() if request.is_json else request.form
-    otp = data.get('otp')
-    
-    # Get MFA settings
-    mfa_settings = secure_db.get_mfa_settings(user_id)
-    if not mfa_settings or not mfa_settings['mfa_enabled']:
-        return jsonify({'error': 'MFA not enabled for this user'}), 400
-    
-    # Verify OTP before disabling
-    if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
-    
-    # Disable MFA
-    if secure_db.disable_mfa(user_id):
-        secure_db.log_security_event(user_id, 'mfa_disabled', 'MFA disabled by user')
-        return jsonify({'success': True, 'message': 'MFA disabled successfully'})
-    else:
-        return jsonify({'error': 'Failed to disable MFA'}), 500
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+    if "user_id" not in session:
+        return jsonify({"error": _("authentication_required")}), 401
 
+    user_id = session["user_id"]
+
+    lang = get_locale()
+    if 'user_id' not in session:
+        return jsonify({'error': translator.gettext('authentication_required', lang)}), 401
+
+    user_id = session['user_id']
+ main
+    data = request.get_json() if request.is_json else request.form
+    otp = data.get("otp")
+
+    mfa_settings = secure_db.get_mfa_settings(user_id)
+ codex/refactor-for-tenant-database-schemas
+=======
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+    if not mfa_settings or not mfa_settings["mfa_enabled"]:
+        return jsonify({"error": _("mfa_not_enabled")}), 400
+
+    if not security_manager.verify_otp(mfa_settings["mfa_secret"], otp):
+        return jsonify({"error": _("invalid_otp")}), 403
+=======
+ main
+    if not mfa_settings or not mfa_settings['mfa_enabled']:
+        return jsonify({'error': translator.gettext('mfa_not_enabled', lang)}), 400
+
+    if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
+        return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
+ main
+
+    if secure_db.disable_mfa(user_id):
+        secure_db.log_security_event(user_id, "mfa_disabled", "MFA disabled by user")
+        return jsonify({"success": True, "message": _("mfa_disabled_success")})
+    else:
+ codex/refactor-for-tenant-database-schemas
+        return jsonify({'error': translator.gettext('failed_disable_mfa', lang)}), 500
+=======
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+        return jsonify({"error": _("failed_to_disable_mfa")}), 500
+
+
+ main
 # -----------------------------
 # ROUTES FOR DIFFERENT DASHBOARDS
 # -----------------------------
+=======
+        return jsonify({'error': translator.gettext('failed_disable_mfa', lang)}), 500
+ main
 
-@app.route('/')
+
+@app.route("/")
 def index():
     """Main landing page with language selection"""
-    return render_template('index.html')
+    return render_template("index.html")
+ main
 
+
+ codex/add-discounts-service-and-route
 
 @app.route('/discounts')
 def discounts():
@@ -249,22 +651,77 @@ def discounts():
     return render_template('discounts.html', discounts=offers)
 
 @app.route('/player/<user_id>')
+=======
+@app.route("/player/<user_id>")
+ main
 def player_dashboard(user_id):
+ codex/create-coin-duel-game-logic
+    """Player dashboard showing active duels."""
+    if session.get('user_id') != user_id:
+        return redirect(url_for('index')), 401
+=======
     """Player Dashboard - Main user interface"""
-    # Check authentication
-    if 'user_id' not in session or session['user_id'] != user_id:
-        return redirect(url_for('login'))
-    
+    if "user_id" not in session or session["user_id"] != user_id:
+        return redirect(url_for("login"))
+
+ main
     user = mall_system.get_user(user_id)
     if not user:
-        user = mall_system.create_user(user_id, "en")
-    
-    user.login()
+        user = mall_system.create_user(user_id, 'en')
     dashboard_data = mall_system.get_user_dashboard(user_id)
-    
-    return render_template('player_dashboard.html', 
-                         user=user, 
-                         dashboard=dashboard_data)
+ codex/create-coin-duel-game-logic
+    return render_template(
+        'player_dashboard.html',
+        user=user,
+        dashboard=dashboard_data,
+        duels=coin_duel_manager.get_user_duels(user_id)
+    )
+
+=======
+ ficjd7-codex/develop-milestone-rewards-system
+=======
+ codex/refactor-for-tenant-database-schemas
+=======
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+=======
+    return render_template('player_dashboard.html',
+                         user=user,
+                         dashboard=dashboard_data,
+                        duels=coin_duel_manager.get_user_duels(user_id))
+ main
+ main
+
+ main
+    milestone_rewards.update_progress(user_id, user.xp)
+    available_milestones = milestone_rewards.get_available_milestones(user_id)
+
+ ficjd7-codex/develop-milestone-rewards-system
+    return render_template(
+        'player_dashboard.html',
+=======
+ s1jkhp-codex/add-localization-framework-to-web_interface.py
+    return render_template(
+        "player_dashboard.html",
+ main
+        user=user,
+        dashboard=dashboard_data,
+        duels=coin_duel_manager.get_user_duels(user_id),
+        milestones=available_milestones,
+    )
+ ficjd7-codex/develop-milestone-rewards-system
+=======
+
+
+    return render_template('player_dashboard.html',
+                         user=user,
+                         dashboard=dashboard_data,
+ codex/refactor-for-tenant-database-schemas
+                         milestones=available_milestones,
+                         duels=coin_duel_manager.get_user_duels(user_id))
+=======
+                         milestones=available_milestones)
+ main
+ main
 
 @app.route('/admin')
 def admin_dashboard():
@@ -297,10 +754,223 @@ def customer_service_dashboard():
     # Check authentication
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     dashboard_data = mall_system.get_customer_service_dashboard()
     return render_template('customer_service_dashboard.html', dashboard=dashboard_data)
 
+
+@app.route('/webar/treasure-hunt', methods=['GET', 'POST'])
+def webar_treasure_hunt():
+    """WebAR Treasure Hunt interaction"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    if request.method == 'GET':
+        return render_template('webar_treasure_hunt.html', user_id=user_id)
+
+    result = mall_system.participate_treasure_hunt(user_id)
+    return jsonify(result)
+
+# -----------------------------
+# VOUCHER ROUTES
+# -----------------------------
+
+@app.route('/customer-service/voucher', methods=['GET', 'POST'])
+def customer_service_voucher():
+    """Customer service voucher lookup and validation"""
+    if request.method == 'GET':
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return render_template('voucher_lookup.html')
+
+    data = request.get_json() if request.is_json else request.form
+    code = data.get('code')
+    if not code:
+        return jsonify({'error': 'Voucher code required'}), 400
+
+    result = voucher_system.validate_voucher(code)
+    return jsonify(result)
+
+
+@app.route('/admin/vouchers', methods=['GET', 'POST'])
+def admin_vouchers():
+    """Admin endpoint for listing and issuing vouchers"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    if request.method == 'GET':
+        vouchers = voucher_system.list_vouchers()
+        return jsonify({'vouchers': vouchers})
+
+    data = request.get_json() if request.is_json else request.form
+    try:
+        value = float(data.get('value', 0))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid value'}), 400
+    user_id = data.get('user_id')
+    expires_in = data.get('expires_in_days')
+    expires_in = int(expires_in) if expires_in else None
+    code = voucher_system.issue_voucher(value, user_id, expires_in, performed_by=session.get('user_id'))
+    return jsonify({'code': code})
+
+
+@app.route('/admin/vouchers/<code>/redeem', methods=['POST'])
+def admin_redeem_voucher(code):
+    """Redeem a voucher for a user"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.get_json() if request.is_json else request.form
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'User ID required'}), 400
+    result = voucher_system.redeem_voucher(code, user_id, performed_by=session.get('user_id'))
+    status = 200 if result.get('success') else 400
+    return jsonify(result), status
+
+
+@app.route('/admin/voucher_audit')
+def admin_voucher_audit():
+    """Retrieve voucher audit logs"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    logs = voucher_system.get_audit_logs()
+    return jsonify({'logs': logs})
+
+# -----------------------------
+# WHEEL OF FORTUNE ADMIN ENDPOINTS
+# -----------------------------
+
+@app.route('/admin/wheel', methods=['GET', 'POST'])
+def admin_wheel_config():
+    """List or modify wheel of fortune prizes."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    wheel = mall_system.wheel_of_fortune
+    if request.method == 'GET':
+        return jsonify({'prizes': wheel.list_prizes()})
+
+    data = request.get_json() if request.is_json else request.form
+    name = data.get('name')
+    if not name:
+        return jsonify({'error': 'Prize name required'}), 400
+
+    probability = data.get('probability')
+    inventory = data.get('inventory')
+    prize_type = data.get('type') or 'coins'
+    value = data.get('value', 0)
+
+    if name in wheel.prizes:
+        wheel.update_prize(
+            name,
+            float(probability) if probability is not None else None,
+            int(inventory) if inventory is not None else None,
+        )
+    else:
+        if probability is None or inventory is None:
+            return jsonify({'error': 'Probability and inventory required'}), 400
+        wheel.configure_prize(
+            name,
+            float(probability),
+            int(inventory),
+            prize_type,
+            float(value),
+        )
+    return jsonify({'prizes': wheel.list_prizes()})
+
+
+@app.route('/admin/wheel/audit')
+def admin_wheel_audit():
+    """Retrieve wheel of fortune audit logs."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    return jsonify({'logs': mall_system.wheel_of_fortune.get_audit_log()})
+
+# -----------------------------
+# COIN DUEL ENDPOINTS
+# -----------------------------
+ main
+
+@app.route('/duel/start', methods=['POST'])
+def duel_start():
+    """Start a coin duel with another player."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    data = request.get_json() or request.form
+    opponent_id = data.get('opponent_id')
+    if not opponent_id:
+        return jsonify({'error': 'Opponent ID required'}), 400
+    duel_id = coin_duel_manager.start_duel(session['user_id'], opponent_id)
+    return jsonify({'duel_id': duel_id})
+
+
+@app.route('/duel/update', methods=['POST'])
+def duel_update():
+    """Update score for current user in a duel."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    data = request.get_json() or request.form
+    duel_id = data.get('duel_id')
+    score = data.get('score')
+    if duel_id is None or score is None:
+        return jsonify({'error': 'Duel ID and score required'}), 400
+    try:
+        score = int(score)
+    except ValueError:
+        return jsonify({'error': 'Score must be integer'}), 400
+    success = coin_duel_manager.update_score(duel_id, session['user_id'], score)
+    if not success:
+        return jsonify({'error': 'Invalid duel'}), 404
+    return jsonify({'success': True})
+
+
+@app.route('/duel/finish', methods=['POST'])
+def duel_finish():
+    """Conclude a duel and determine the winner."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    data = request.get_json() or request.form
+    duel_id = data.get('duel_id')
+    if not duel_id:
+        return jsonify({'error': 'Duel ID required'}), 400
+    result = coin_duel_manager.conclude_duel(duel_id)
+    if not result:
+        return jsonify({'error': 'Invalid duel'}), 404
+    return jsonify(result)
+
+
+@app.route('/duel/status/<duel_id>')
+def duel_status(duel_id):
+    """Get current status of a duel."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    duel = coin_duel_manager.get_duel(duel_id)
+    if not duel:
+        return jsonify({'error': 'Duel not found'}), 404
+    return jsonify(duel)
+
+ codex/create-coin-duel-game-logic
+
+if __name__ == '__main__':
+    app.run(debug=True)
+=======
+ q7l2bc-codex/implement-wheel-of-fortune-features
+# -----------------------------
+# WHEEL OF FORTUNE SPIN
+# -----------------------------
+
+@app.route('/wheel/spin', methods=['POST'])
+def wheel_spin():
+    """Spin the wheel of fortune for the authenticated user."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+    result = mall_system.spin_wheel(session['user_id'])
+    return jsonify(result)
+
+main
+
+ main
 # -----------------------------
 # API ENDPOINTS
 # -----------------------------
@@ -309,12 +979,13 @@ def customer_service_dashboard():
 def api_submit_receipt():
     """API endpoint for receipt submission"""
     # Check authentication
+    lang = get_locale()
     if 'user_id' not in session:
-        return jsonify({'error': 'Authentication required'}), 401
+        return jsonify({'error': translator.gettext('authentication_required', lang)}), 401
     
     # Rate limiting
     if not secure_db.check_rate_limit(request.remote_addr, 'submit_receipt', 10, 60):
-        return jsonify({'error': 'Rate limit exceeded'}), 429
+        return jsonify({'error': translator.gettext('rate_limit_exceeded', lang)}), 429
     
     data = request.get_json()
     user_id = data.get('user_id')
@@ -323,12 +994,12 @@ def api_submit_receipt():
     
     # Validate input
     if not user_id or not amount:
-        return jsonify({'error': 'User ID and amount are required'}), 400
+        return jsonify({'error': translator.gettext('user_and_amount_required', lang)}), 400
     
     # Validate amount
     validated_amount = input_validator.validate_amount(amount)
     if validated_amount is None:
-        return jsonify({'error': 'Invalid amount'}), 400
+        return jsonify({'error': translator.gettext('invalid_amount', lang)}), 400
     
     # Sanitize store name
     sanitized_store = input_validator.sanitize_string(store, 100)
@@ -359,17 +1030,18 @@ def api_generate_mission():
 @app.route('/api/remove-receipt', methods=['POST'])
 def api_remove_receipt():
     """API endpoint for admin receipt removal"""
+    lang = get_locale()
     data = request.get_json()
     user_id = data.get('user_id')
     receipt_index = data.get('receipt_index')
     reason = data.get('reason', 'Invalid/Fraudulent')
-    
+
     user = mall_system.get_user(user_id)
     if user:
         admin_remove_receipt(user, receipt_index, reason)
         return jsonify({'success': True, 'coins': user.coins})
-    
-    return jsonify({'success': False, 'error': 'User not found'})
+
+    return jsonify({'success': False, 'error': translator.gettext('user_not_found', lang)})
 
 @app.route('/api/create-ticket', methods=['POST'])
 def api_create_ticket():
@@ -390,9 +1062,99 @@ def api_respond_ticket():
     ticket_id = data.get('ticket_id')
     response = data.get('response')
     agent_id = data.get('agent_id')
-    
+
     mall_system.customer_service.respond_to_ticket(ticket_id, response, agent_id)
     return jsonify({'success': True})
+
+@app.route('/api/claim-milestone', methods=['POST'])
+def api_claim_milestone():
+    """Claim a milestone reward"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.get_json()
+    milestone_id = data.get('milestone_id')
+    user_id = session['user_id']
+
+    reward = milestone_rewards.claim_milestone(user_id, milestone_id)
+    if reward:
+        user = mall_system.get_user(user_id)
+        if user:
+            user.coins += reward.get('coins', 0)
+        return jsonify({
+            'success': True,
+            'reward': reward,
+            'message': f"Milestone claimed! +{reward.get('coins', 0)} coins"
+        })
+
+    return jsonify({'error': 'Milestone not available'}), 400
+ main
+
+ codex/implement-realtime-leaderboard-service
+# -----------------------------
+# LEADERBOARD STREAMING
+# -----------------------------
+
+@app.route('/leaderboard')
+def leaderboard_view():
+    """Render the real-time leaderboard view."""
+    leaderboard_type = request.args.get('type', 'coins')
+    return render_template('leaderboard.html', leaderboard_type=leaderboard_type)
+
+
+@app.route('/stream/leaderboard/<leaderboard_type>')
+def stream_leaderboard(leaderboard_type):
+    """Stream leaderboard updates using Server-Sent Events."""
+    interval = request.args.get('interval', default=5, type=int)
+    limit = request.args.get('limit', default=10, type=int)
+    return leaderboard_service.stream(leaderboard_type, interval=interval, limit=limit)
+
+# -----------------------------
+# WHEEL OF FORTUNE ENDPOINTS
+# -----------------------------
+
+@app.route('/api/wheel/spin', methods=['POST'])
+def api_wheel_spin():
+    """Spin the wheel of fortune for the authenticated user"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_id = session['user_id']
+    result = wheel.spin(user_id)
+    if not result:
+        return jsonify({'success': False, 'error': 'No prizes available'}), 400
+
+    return jsonify({'success': True, 'result': result})
+
+
+@app.route('/api/wheel/config', methods=['GET', 'POST'])
+def api_wheel_config():
+    """Super admin configuration for wheel prizes"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    # In production, verify super-admin privileges here
+    if request.method == 'GET':
+        return jsonify({'success': True, 'prizes': wheel.get_prizes()})
+
+    data = request.get_json()
+    name = data.get('name')
+    probability = data.get('probability')
+    inventory = data.get('inventory')
+    reward = data.get('reward', {})
+
+    if not name or probability is None or inventory is None:
+        return jsonify({'error': 'Invalid prize configuration'}), 400
+
+    # Basic validation of numeric fields
+    try:
+        probability = float(probability)
+        inventory = int(inventory)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid probability or inventory'}), 400
+
+    wheel.configure_prize(name, probability, inventory, reward)
+    return jsonify({'success': True, 'prizes': wheel.get_prizes()})
 
 # -----------------------------
 # LANGUAGE SWITCHING
@@ -407,6 +1169,7 @@ def switch_language(language):
             user.language = language
     
     session['language'] = language
+    session['lang'] = language
     return redirect(request.referrer or url_for('index'))
 
 # -----------------------------
@@ -462,5 +1225,8 @@ def health_check():
             'error': str(e)
         }), 500
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+if __name__ == "__main__":
+    app.run(debug=True)
+ main
+
+ main

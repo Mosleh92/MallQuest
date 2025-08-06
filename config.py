@@ -6,15 +6,28 @@ Supports Development, Production, and Testing environments
 
 import os
 import secrets
+import json
 from pathlib import Path
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
+import json
+from dataclasses import dataclass
 
 # Load environment variables from .env file
 load_dotenv()
 
+@dataclass
+class TenantSettings:
+    name: str
+    domain: str
+    schema: str
+    theme: str = 'default'
+    logo: str = ''
+
 class BaseConfig:
     """Base configuration class with common settings"""
+    TENANT_CONFIG_FILE = os.getenv('TENANT_CONFIG_FILE', 'tenants.json')
+    TENANTS: Dict[str, TenantSettings] = {}
     
     # Flask Configuration
     SECRET_KEY = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -25,6 +38,7 @@ class BaseConfig:
     # Database Configuration
     DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///mall_gamification.db')
     DATABASE_PATH = os.getenv('DATABASE_PATH', 'mall_gamification.db')
+    TENANT_CONFIG_PATH = os.getenv('TENANT_CONFIG_PATH', 'tenants.json')
     
     # Redis Configuration (Optional)
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -101,15 +115,41 @@ class BaseConfig:
     HEALTH_CHECK_INTERVAL = int(os.getenv('HEALTH_CHECK_INTERVAL', '30'))
     
     @classmethod
-    def get_database_config(cls) -> Dict[str, Any]:
-        """Get database configuration as dictionary"""
-        return {
+    def load_tenants(cls) -> Dict[str, TenantSettings]:
+        """Load tenant settings from JSON file"""
+        try:
+            with open(cls.TENANT_CONFIG_FILE, 'r') as f:
+                data = json.load(f)
+            cls.TENANTS = {k: TenantSettings(**v) for k, v in data.items()}
+        except FileNotFoundError:
+            cls.TENANTS = {}
+        return cls.TENANTS
+
+    @classmethod
+    def get_tenant(cls, host: str) -> Optional[TenantSettings]:
+        """Retrieve tenant settings by domain"""
+        if not cls.TENANTS:
+            cls.load_tenants()
+        for tenant in cls.TENANTS.values():
+            if tenant.domain == host:
+                return tenant
+        return None
+
+    @classmethod
+    def get_database_config(cls, tenant_domain: Optional[str] = None) -> Dict[str, Any]:
+        """Get database configuration as dictionary, optionally per-tenant"""
+        config = {
             'url': cls.DATABASE_URL,
             'path': cls.DATABASE_PATH,
             'testing': cls.TESTING,
             'test_url': cls.TEST_DATABASE_URL
         }
-    
+        if tenant_domain:
+            tenant = cls.get_tenant(tenant_domain)
+            if tenant:
+                config['schema'] = tenant.schema
+        return config
+
     @classmethod
     def get_redis_config(cls) -> Dict[str, Any]:
         """Get Redis configuration as dictionary"""
@@ -166,6 +206,50 @@ class BaseConfig:
             'social_features': cls.ENABLE_SOCIAL_FEATURES,
             'vip_system': cls.ENABLE_VIP_SYSTEM
         }
+
+
+class TenantManager:
+    """Load and manage tenant-specific configuration."""
+
+    _tenants: Dict[str, Any] = {}
+
+    @classmethod
+    def _config_path(cls) -> Path:
+        return Path(BaseConfig.TENANT_CONFIG_PATH)
+
+    @classmethod
+    def load_tenants(cls) -> Dict[str, Any]:
+        """Load tenant configuration from JSON file."""
+        if not cls._tenants:
+            path = cls._config_path()
+            if path.exists():
+                cls._tenants = json.loads(path.read_text())
+            else:
+                cls._tenants = {}
+        return cls._tenants
+
+    @classmethod
+    def get_tenant(cls, domain: str) -> Optional[Dict[str, Any]]:
+        """Return configuration for a specific tenant domain."""
+        tenants = cls.load_tenants()
+        return tenants.get(domain)
+
+    @classmethod
+    def add_tenant(cls, domain: str, schema: str, name: str, theme: str = 'default') -> None:
+        """Add or update a tenant configuration and persist it."""
+        tenants = cls.load_tenants()
+        tenants[domain] = {
+            'schema': schema,
+            'name': name,
+            'theme': theme
+        }
+        cls.save_tenants()
+
+    @classmethod
+    def save_tenants(cls) -> None:
+        """Persist tenant configuration to JSON file."""
+        path = cls._config_path()
+        path.write_text(json.dumps(cls._tenants, indent=2))
 
 class DevelopmentConfig(BaseConfig):
     """Development environment configuration"""
