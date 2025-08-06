@@ -24,12 +24,12 @@
 import time
 import random
 import re
-import time
 from datetime import datetime, timedelta
 from collections import defaultdict
 import json
 import hashlib
 import uuid
+from flash_events import FlashEventManager, FlashEventAdminInterface
 
 # Import 3D Graphics Module
 try:
@@ -1177,6 +1177,8 @@ class MallGamificationSystem:
         self.personalized_mission_generator = PersonalizedMissionGenerator()
         self.intelligent_reward_system = IntelligentRewardSystem()
         self.event_scheduler = EventScheduler()
+        self.flash_events = FlashEventManager()
+        self.flash_event_admin = FlashEventAdminInterface(self.flash_events)
         self.customer_service = CustomerService()
         self.abu_dhabi_features = AbuDhabiSpecialFeatures()
 
@@ -1214,10 +1216,13 @@ class MallGamificationSystem:
         
         # Team system
         self.teams = {}
-        
+
         # Event management
         self.active_events = []
         self.team_challenges = {}
+
+        # Event logging
+        self.event_log = []
         
         # Initialize 3D Graphics if available
         self.graphics_3d_available = GRAPHICS_3D_AVAILABLE
@@ -1263,7 +1268,81 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
+ codex/add-flash_events.py-for-time-bound-events
+        self.flash_event_admin.define_zone("center_court", (0.0, 0.0), 50.0)
+        self.flash_event_admin.schedule_event(
+            "Weekend Blast",
+            datetime.now() - timedelta(days=1),
+            datetime.now() + timedelta(days=1),
+            ["center_court"],
+            multiplier=1.2,
+        )
+
+    def activate_events(self):
+        """Update active flash events based on current time."""
+        events = self.flash_events.activate_events()
+        self.active_events = [e.name for e in events]
+        return events
+
+    def deactivate_event(self, name: str) -> None:
+        """Deactivate a flash event."""
+        self.flash_events.deactivate_event(name)
+        self.active_events = [e.name for e in self.flash_events.activate_events()]
+
+    def track_event_participation(self, user_id: str, event_name: str, progress: int = 1) -> bool:
+        """Track participant progress in a flash event."""
+        return self.flash_events.record_participation(event_name, user_id, progress)
+
+    def get_event_progress(self, user_id: str, event_name: str) -> int:
+        """Retrieve progress for a participant in a flash event."""
+        return self.flash_events.get_participant_progress(event_name, user_id)
+
+    def admin_define_zone(self, zone_id: str, coordinates: tuple, radius: float) -> None:
+        """Admin interface to define AR zones."""
+        self.flash_event_admin.define_zone(zone_id, coordinates, radius)
+
+    def admin_schedule_flash_event(
+        self,
+        name: str,
+        start: datetime,
+        end: datetime,
+        zone_ids: list,
+        multiplier: float = 1.0,
+    ) -> None:
+        """Admin interface to schedule flash events."""
+        self.flash_event_admin.schedule_event(name, start, end, zone_ids, multiplier)
+
+
+
+    def log_event(self, event_type: str, details: dict):
+        """Record system events for auditing and analytics."""
+        self.event_log.append({
+            'type': event_type,
+            'details': details,
+            'timestamp': datetime.now()
+        })
+
+    def handle_coin_duel_result(self, duel_id: str, winner_id: str, loser_id: str, scores: dict):
+        """Allocate rewards to duel winner and log the outcome."""
+        reward = 50
+        winner = self.get_user(winner_id)
+        loser = self.get_user(loser_id)
+        if winner:
+            winner.coins += reward
+            winner.update_level()
+            winner.rewards.append(f"🏆 Won coin duel against {loser_id} +{reward} coins")
+        if loser:
+            loser.rewards.append(f"🎮 Lost coin duel against {winner_id}")
+        self.log_event('coin_duel_completed', {
+            'duel_id': duel_id,
+            'winner': winner_id,
+            'loser': loser_id,
+            'scores': scores,
+            'reward': reward
+        })
+        return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
     
+ main
     def create_user(self, user_id: str, language: str = "en") -> User:
         """Create a new user with smart caching"""
         if SMART_CACHE_AVAILABLE:
@@ -1461,10 +1540,17 @@ class MallGamificationSystem:
     
     def get_active_event_multiplier(self) -> float:
         """Get active event multiplier"""
-        active_events = self.event_scheduler.get_active_events()
-        if active_events:
-            return max(event.get('bonus_multiplier', 1.0) for event in active_events)
-        return 1.0
+        scheduler_events = self.event_scheduler.get_active_events()
+        flash_events = self.flash_events.activate_events()
+        multiplier = 1.0
+        if scheduler_events:
+            scheduler_mult = max(event.get('bonus_multiplier', 1.0) for event in scheduler_events)
+            multiplier = max(multiplier, scheduler_mult)
+        if flash_events:
+            flash_mult = max(event.multiplier for event in flash_events)
+            multiplier = max(multiplier, flash_mult)
+            self.active_events = [event.name for event in flash_events]
+        return multiplier
     
     def get_time_period(self) -> str:
         """Get current time period"""
@@ -1724,6 +1810,24 @@ class MallGamificationSystem:
             "total_coins": total_coins,
             "suspicious_receipts": suspicious_count,
             "active_events": self.event_scheduler.get_active_events(),
+            "flash_events": [
+                {
+                    "name": e.name,
+                    "start": e.start,
+                    "end": e.end,
+                    "zones": e.zones,
+                    "multiplier": e.multiplier,
+                }
+                for e in self.flash_events.activate_events()
+            ],
+            "ar_zones": {
+                zone_id: {
+                    "name": zone.name,
+                    "coordinates": zone.coordinates,
+                    "radius": zone.radius,
+                }
+                for zone_id, zone in self.flash_events.zones.items()
+            },
             "shopkeeper_stats": {
                 shop_id: {
                     "total_sales": shopkeeper.total_sales,
@@ -2031,3 +2135,7 @@ if __name__ == "__main__":
     
     print("\n=== CUSTOMER SERVICE DASHBOARD ===")
     print(json.dumps(cs_dashboard, indent=2, default=str)) 
+
+# Integration of Treasure Hunt
+from ar_treasure_hunt import TreasureHuntManager
+

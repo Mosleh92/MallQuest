@@ -112,7 +112,7 @@
 
 ### Environment Variables:
 - **JWT_SECRET_KEY** - JWT token signing
-- **SECRET_KEY** - Flask session security
+- **FLASK_SECRET_KEY** - Flask session security
 - **DATABASE_URL** - Database connection
 - **REDIS_URL** - Cache connection
 - **MFA_ENABLED** - Multi-factor authentication
@@ -265,7 +265,7 @@ docker-compose --profile staging up -d
 
 ### ✅ Required Setup:
 - [ ] Copy `env.example` to `.env`
-- [ ] Set secure `SECRET_KEY` and `JWT_SECRET_KEY`
+- [ ] Set secure `FLASK_SECRET_KEY` and `JWT_SECRET_KEY`
 - [ ] Configure `DATABASE_URL` for your environment
 - [ ] Set `REDIS_URL` if using Redis
 - [ ] Configure `FLASK_ENV` (development/production/testing)
