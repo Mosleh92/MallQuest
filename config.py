@@ -9,12 +9,24 @@ import secrets
 from pathlib import Path
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
+import json
+from dataclasses import dataclass
 
 # Load environment variables from .env file
 load_dotenv()
 
+@dataclass
+class TenantSettings:
+    name: str
+    domain: str
+    schema: str
+    theme: str = 'default'
+    logo: str = ''
+
 class BaseConfig:
     """Base configuration class with common settings"""
+    TENANT_CONFIG_FILE = os.getenv('TENANT_CONFIG_FILE', 'tenants.json')
+    TENANTS: Dict[str, TenantSettings] = {}
     
     # Flask Configuration
     SECRET_KEY = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -101,15 +113,41 @@ class BaseConfig:
     HEALTH_CHECK_INTERVAL = int(os.getenv('HEALTH_CHECK_INTERVAL', '30'))
     
     @classmethod
-    def get_database_config(cls) -> Dict[str, Any]:
-        """Get database configuration as dictionary"""
-        return {
+    def load_tenants(cls) -> Dict[str, TenantSettings]:
+        """Load tenant settings from JSON file"""
+        try:
+            with open(cls.TENANT_CONFIG_FILE, 'r') as f:
+                data = json.load(f)
+            cls.TENANTS = {k: TenantSettings(**v) for k, v in data.items()}
+        except FileNotFoundError:
+            cls.TENANTS = {}
+        return cls.TENANTS
+
+    @classmethod
+    def get_tenant(cls, host: str) -> Optional[TenantSettings]:
+        """Retrieve tenant settings by domain"""
+        if not cls.TENANTS:
+            cls.load_tenants()
+        for tenant in cls.TENANTS.values():
+            if tenant.domain == host:
+                return tenant
+        return None
+
+    @classmethod
+    def get_database_config(cls, tenant_domain: Optional[str] = None) -> Dict[str, Any]:
+        """Get database configuration as dictionary, optionally per-tenant"""
+        config = {
             'url': cls.DATABASE_URL,
             'path': cls.DATABASE_PATH,
             'testing': cls.TESTING,
             'test_url': cls.TEST_DATABASE_URL
         }
-    
+        if tenant_domain:
+            tenant = cls.get_tenant(tenant_domain)
+            if tenant:
+                config['schema'] = tenant.schema
+        return config
+
     @classmethod
     def get_redis_config(cls) -> Dict[str, Any]:
         """Get Redis configuration as dictionary"""

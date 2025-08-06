@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mall Leaderboard</title>
+    <title>{{ leaderboard_type|capitalize }} Leaderboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         h1 { text-align: center; }
@@ -11,10 +11,10 @@
     </style>
 </head>
 <body>
-    <h1>Live Leaderboard</h1>
+    <h1>{{ leaderboard_type|capitalize }} Leaderboard</h1>
     <ul id="leaderboard"></ul>
     <script>
-        const source = new EventSource("{{ url_for('stream_leaderboard', leaderboard_type='coins') }}");
+        const source = new EventSource("{{ url_for('stream_leaderboard', leaderboard_type=leaderboard_type) }}");
         source.onmessage = function(event) {
             const data = JSON.parse(event.data);
             const list = document.getElementById('leaderboard');
