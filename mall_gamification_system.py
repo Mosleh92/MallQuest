@@ -24,7 +24,6 @@
 import time
 import random
 import re
-import time
 from datetime import datetime, timedelta
 from collections import defaultdict
 import json
@@ -1983,3 +1982,7 @@ if __name__ == "__main__":
     
     print("\n=== CUSTOMER SERVICE DASHBOARD ===")
     print(json.dumps(cs_dashboard, indent=2, default=str)) 
+
+# Integration of Treasure Hunt
+from ar_treasure_hunt import TreasureHuntManager
+

@@ -4,9 +4,13 @@ from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
+ codex/develop-milestone-rewards-system
 from milestone_rewards import MilestoneRewards
+from i18n import translator, get_locale
+ main
 import json
 import logging
+import os
 from datetime import datetime
 
 # Configure logging
@@ -14,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = 'deerfields_mall_secret_key_2024'
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
@@ -28,6 +32,23 @@ rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
 milestone_rewards = MilestoneRewards()
 
+# Inject translation function into templates
+@app.context_processor
+def inject_translations():
+    lang = session.get('lang', translator.default_locale)
+    return {'t': lambda key: translator.gettext(key, lang)}
+
+# Serve localization files
+@app.route('/locales/<lang>.json')
+def serve_locale(lang):
+    """Return localization dictionary for client-side use"""
+    data = translator.translations.get(lang)
+    if not data:
+        lang = translator.default_locale
+        data = translator.translations.get(lang, {})
+    session['lang'] = lang
+    return jsonify(data)
+
 # -----------------------------
 # AUTHENTICATION ROUTES
 # -----------------------------
@@ -37,6 +58,7 @@ milestone_rewards = MilestoneRewards()
 def login():
     """Login page with MFA support"""
     start_time = datetime.now()
+    lang = get_locale()
     
     if request.method == 'GET':
         response_time = (datetime.now() - start_time).total_seconds()
@@ -54,16 +76,16 @@ def login():
     
     # Validate input
     if not user_id or not password:
-        return jsonify({'error': 'User ID and password are required'}), 400
+        return jsonify({'error': translator.gettext('user_password_required', lang)}), 400
     
     # Get user
     user = mall_system.get_user(user_id)
     if not user:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': translator.gettext('user_not_found', lang)}), 404
     
     # Verify password (simplified for demo - in production use proper password hashing)
     if password != "demo123":  # Replace with proper password verification
-        return jsonify({'error': 'Invalid credentials'}), 401
+        return jsonify({'error': translator.gettext('invalid_credentials', lang)}), 401
     
     # Check if MFA is enabled for this user
     mfa_settings = secure_db.get_mfa_settings(user_id)
@@ -71,13 +93,13 @@ def login():
     if mfa_settings and mfa_settings['mfa_enabled']:
         # MFA is enabled, verify OTP
         if not otp:
-            return jsonify({'error': 'OTP required', 'mfa_required': True}), 401
+            return jsonify({'error': translator.gettext('otp_required', lang), 'mfa_required': True}), 401
         
         # Verify OTP
         if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
             # Log failed attempt
             secure_db.log_mfa_attempt(user_id, 'otp', False)
-            return jsonify({'error': 'کد OTP نامعتبر', 'mfa_required': True}), 403
+            return jsonify({'error': translator.gettext('otp_invalid', lang), 'mfa_required': True}), 403
         
         # Log successful attempt
         secure_db.log_mfa_attempt(user_id, 'otp', True)
@@ -115,8 +137,9 @@ def mfa_setup():
     """Setup MFA for user"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     user_id = session['user_id']
+    lang = get_locale()
     
     if request.method == 'GET':
         # Generate new MFA secret
@@ -140,15 +163,15 @@ def mfa_setup():
     otp = data.get('otp')
     
     if not otp:
-        return jsonify({'error': 'OTP is required'}), 400
+        return jsonify({'error': translator.gettext('otp_required', lang)}), 400
     
     mfa_setup_data = session.get('mfa_setup')
     if not mfa_setup_data:
-        return jsonify({'error': 'MFA setup session expired'}), 400
+        return jsonify({'error': translator.gettext('mfa_setup_session_expired', lang)}), 400
     
     # Verify OTP
     if not security_manager.verify_otp(mfa_setup_data['secret'], otp):
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
+        return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
     
     # Save MFA settings
     if secure_db.save_mfa_settings(user_id, mfa_setup_data['secret'], mfa_setup_data['backup_codes']):
@@ -161,25 +184,26 @@ def mfa_setup():
         # Log security event
         secure_db.log_security_event(user_id, 'mfa_enabled', 'MFA setup completed')
         
-        return jsonify({'success': True, 'message': 'MFA enabled successfully'})
+        return jsonify({'success': True, 'message': translator.gettext('mfa_enabled_success', lang)})
     else:
-        return jsonify({'error': 'Failed to save MFA settings'}), 500
+        return jsonify({'error': translator.gettext('failed_save_mfa', lang)}), 500
 
 @app.route('/mfa/verify', methods=['POST'])
 def mfa_verify():
     """Verify MFA code"""
+    lang = get_locale()
     data = request.get_json() if request.is_json else request.form
     user_id = data.get('user_id')
     otp = data.get('otp')
     backup_code = data.get('backup_code')
     
     if not user_id:
-        return jsonify({'error': 'User ID is required'}), 400
+        return jsonify({'error': translator.gettext('user_id_required', lang)}), 400
     
     # Get MFA settings
     mfa_settings = secure_db.get_mfa_settings(user_id)
     if not mfa_settings or not mfa_settings['mfa_enabled']:
-        return jsonify({'error': 'MFA not enabled for this user'}), 400
+        return jsonify({'error': translator.gettext('mfa_not_enabled', lang)}), 400
     
     success = False
     attempt_type = None
@@ -196,41 +220,42 @@ def mfa_verify():
             secure_db.update_backup_codes(user_id, mfa_settings['backup_codes'])
         attempt_type = 'backup'
     else:
-        return jsonify({'error': 'OTP or backup code is required'}), 400
+        return jsonify({'error': translator.gettext('otp_or_backup_required', lang)}), 400
     
     # Log attempt
     secure_db.log_mfa_attempt(user_id, attempt_type, success)
     
     if success:
-        return jsonify({'success': True, 'message': 'MFA verification successful'})
+        return jsonify({'success': True, 'message': translator.gettext('mfa_verify_success', lang)})
     else:
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
+        return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
 
 @app.route('/mfa/disable', methods=['POST'])
 def mfa_disable():
     """Disable MFA for user"""
+    lang = get_locale()
     if 'user_id' not in session:
-        return jsonify({'error': 'Authentication required'}), 401
-    
+        return jsonify({'error': translator.gettext('authentication_required', lang)}), 401
+
     user_id = session['user_id']
     data = request.get_json() if request.is_json else request.form
     otp = data.get('otp')
-    
+
     # Get MFA settings
     mfa_settings = secure_db.get_mfa_settings(user_id)
     if not mfa_settings or not mfa_settings['mfa_enabled']:
-        return jsonify({'error': 'MFA not enabled for this user'}), 400
-    
+        return jsonify({'error': translator.gettext('mfa_not_enabled', lang)}), 400
+
     # Verify OTP before disabling
     if not security_manager.verify_otp(mfa_settings['mfa_secret'], otp):
-        return jsonify({'error': 'کد OTP نامعتبر'}), 403
-    
+        return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
+
     # Disable MFA
     if secure_db.disable_mfa(user_id):
         secure_db.log_security_event(user_id, 'mfa_disabled', 'MFA disabled by user')
-        return jsonify({'success': True, 'message': 'MFA disabled successfully'})
+        return jsonify({'success': True, 'message': translator.gettext('mfa_disabled_success', lang)})
     else:
-        return jsonify({'error': 'Failed to disable MFA'}), 500
+        return jsonify({'error': translator.gettext('failed_disable_mfa', lang)}), 500
 
 # -----------------------------
 # ROUTES FOR DIFFERENT DASHBOARDS
@@ -305,12 +330,13 @@ def customer_service_dashboard():
 def api_submit_receipt():
     """API endpoint for receipt submission"""
     # Check authentication
+    lang = get_locale()
     if 'user_id' not in session:
-        return jsonify({'error': 'Authentication required'}), 401
+        return jsonify({'error': translator.gettext('authentication_required', lang)}), 401
     
     # Rate limiting
     if not secure_db.check_rate_limit(request.remote_addr, 'submit_receipt', 10, 60):
-        return jsonify({'error': 'Rate limit exceeded'}), 429
+        return jsonify({'error': translator.gettext('rate_limit_exceeded', lang)}), 429
     
     data = request.get_json()
     user_id = data.get('user_id')
@@ -319,12 +345,12 @@ def api_submit_receipt():
     
     # Validate input
     if not user_id or not amount:
-        return jsonify({'error': 'User ID and amount are required'}), 400
+        return jsonify({'error': translator.gettext('user_and_amount_required', lang)}), 400
     
     # Validate amount
     validated_amount = input_validator.validate_amount(amount)
     if validated_amount is None:
-        return jsonify({'error': 'Invalid amount'}), 400
+        return jsonify({'error': translator.gettext('invalid_amount', lang)}), 400
     
     # Sanitize store name
     sanitized_store = input_validator.sanitize_string(store, 100)
@@ -355,17 +381,18 @@ def api_generate_mission():
 @app.route('/api/remove-receipt', methods=['POST'])
 def api_remove_receipt():
     """API endpoint for admin receipt removal"""
+    lang = get_locale()
     data = request.get_json()
     user_id = data.get('user_id')
     receipt_index = data.get('receipt_index')
     reason = data.get('reason', 'Invalid/Fraudulent')
-    
+
     user = mall_system.get_user(user_id)
     if user:
         admin_remove_receipt(user, receipt_index, reason)
         return jsonify({'success': True, 'coins': user.coins})
-    
-    return jsonify({'success': False, 'error': 'User not found'})
+
+    return jsonify({'success': False, 'error': translator.gettext('user_not_found', lang)})
 
 @app.route('/api/create-ticket', methods=['POST'])
 def api_create_ticket():
@@ -426,6 +453,7 @@ def switch_language(language):
             user.language = language
     
     session['language'] = language
+    session['lang'] = language
     return redirect(request.referrer or url_for('index'))
 
 # -----------------------------
