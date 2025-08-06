@@ -47,7 +47,7 @@ try:
     graphics_controller = graphics_3d_module.graphics_controller
     
     GRAPHICS_3D_AVAILABLE = True
-except ImportError:
+except Exception:
     GRAPHICS_3D_AVAILABLE = False
     logger.warning("[SYSTEM] 3D Graphics module not available, using basic effects")
 
@@ -1273,12 +1273,8 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
- codex/clean-up-sample-data-initialization
-        # Initialize sample flash event zone and event for time-bound promotions
-=======
 
-        # Initialize sample flash event zone and event
- main
+        # Initialize sample flash event zone and event for time-bound promotions
         self.flash_event_admin.define_zone("center_court", (0.0, 0.0), 50.0)
         self.flash_event_admin.schedule_event(
             "Weekend Blast",
@@ -1353,18 +1349,10 @@ class MallGamificationSystem:
         })
         return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
 
- codex/clean-up-sample-data-initialization
     def spin_wheel(self, user_id: str):
         """Expose wheel of fortune spin for users."""
         return self.wheel_of_fortune.spin(user_id)
 
-=======
-    
-
-    def spin_wheel(self, user_id: str):
-        """Expose wheel of fortune spin for users."""
-        return self.wheel_of_fortune.spin(user_id)
- main
     def create_user(self, user_id: str, language: str = "en") -> User:
         """Create a new user with smart caching"""
         if SMART_CACHE_AVAILABLE:
