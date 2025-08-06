@@ -21,6 +21,10 @@ from security_module import (
     log_security_event,
 )
 from performance_module import PerformanceManager, record_performance_event
+ codex/update-password-handling-in-web-interface
+from werkzeug.security import check_password_hash
+from database import db
+=======
  codex/refactor-for-tenant-database-schemas
 =======
  s1jkhp-codex/add-localization-framework-to-web_interface.py
@@ -40,6 +44,7 @@ from i18n import translator, get_locale
  codex/refactor-for-tenant-database-schemas
 from config import BaseConfig
 =======
+ main
  main
 import json
  main
@@ -155,10 +160,10 @@ def serve_locale(lang):
     session["lang"] = lang
     return jsonify(data)
  codex/refactor-for-tenant-database-schemas
-=======
+
  s1jkhp-codex/add-localization-framework-to-web_interface.py
 
-=======
+
  main
  main
  main
@@ -176,7 +181,7 @@ def login():
     session['user_id'] = user_id
     return redirect(url_for('player_dashboard', user_id=user_id))
 
-=======
+
 
 @app.route("/login", methods=["GET", "POST"])
 @rate_limiter.limit(max_requests=5, window_seconds=300)
@@ -200,10 +205,20 @@ def login():
  codex/refactor-for-tenant-database-schemas
         return jsonify({'error': translator.gettext('user_password_required', lang)}), 400
     
+ codex/update-password-handling-in-web-interface
+    # Get user credentials from database
+    user_record = db.get_user(user_id)
+    if not user_record:
+        return jsonify({'error': 'User not found'}), 404
+
+    # Verify password against stored hash
+    stored_hash = user_record.get('password_hash')
+    if not stored_hash or not check_password_hash(stored_hash, password):
+        return jsonify({'error': 'Invalid credentials'}), 401
     # Get user
     user = mall_system.get_user(user_id)
     if not user:
-=======
+
  s1jkhp-codex/add-localization-framework-to-web_interface.py
         return jsonify({"error": _("user_id_password_required")}), 400
 
@@ -227,11 +242,17 @@ def login():
         return jsonify({'error': translator.gettext('invalid_credentials', lang)}), 401
  codex/refactor-for-tenant-database-schemas
 =======
+ main
 
     # Ensure user exists in mall system
     user = mall_system.get_user(user_id)
     if not user:
+ codex/update-password-handling-in-web-interface
+        user = User(user_id)
+        mall_system.users[user_id] = user
+=======
         user = mall_system.create_user(user_id, lang)
+ main
  main
     
     # Check if MFA is enabled for this user
@@ -373,7 +394,7 @@ def mfa_setup():
         return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
 
     # Save MFA settings
-=======
+
     if not security_manager.verify_otp(mfa_setup_data['secret'], otp):
         return jsonify({'error': translator.gettext('otp_invalid', lang)}), 403
 
@@ -384,7 +405,7 @@ def mfa_setup():
         secure_db.log_security_event(user_id, 'mfa_enabled', 'MFA setup completed')
  codex/refactor-for-tenant-database-schemas
         
-=======
+
  main
         return jsonify({'success': True, 'message': translator.gettext('mfa_enabled_success', lang)})
     else:
@@ -1064,7 +1085,7 @@ def health_check():
             'timestamp': datetime.now().isoformat(),
             'error': str(e)
         }), 500
-=======
+
 if __name__ == "__main__":
     app.run(debug=True)
  main
