@@ -4,6 +4,7 @@ from flask_wtf.csrf import CSRFProtect
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import SecurityManager, SecureDatabase, InputValidator, RateLimiter, log_security_event
 from performance_module import PerformanceManager, record_performance_event
+from milestone_rewards import MilestoneRewards
 import json
 import logging
 from datetime import datetime
@@ -25,6 +26,7 @@ secure_db = SecureDatabase()
 input_validator = InputValidator()
 rate_limiter = RateLimiter()
 performance_manager = PerformanceManager()
+milestone_rewards = MilestoneRewards()
 
 # -----------------------------
 # AUTHENTICATION ROUTES
@@ -249,13 +251,16 @@ def player_dashboard(user_id):
     user = mall_system.get_user(user_id)
     if not user:
         user = mall_system.create_user(user_id, "en")
-    
+
     user.login()
     dashboard_data = mall_system.get_user_dashboard(user_id)
-    
-    return render_template('player_dashboard.html', 
-                         user=user, 
-                         dashboard=dashboard_data)
+    milestone_rewards.update_progress(user_id, user.xp)
+    available_milestones = milestone_rewards.get_available_milestones(user_id)
+
+    return render_template('player_dashboard.html',
+                         user=user,
+                         dashboard=dashboard_data,
+                         milestones=available_milestones)
 
 @app.route('/admin')
 def admin_dashboard():
@@ -381,9 +386,32 @@ def api_respond_ticket():
     ticket_id = data.get('ticket_id')
     response = data.get('response')
     agent_id = data.get('agent_id')
-    
+
     mall_system.customer_service.respond_to_ticket(ticket_id, response, agent_id)
     return jsonify({'success': True})
+
+@app.route('/api/claim-milestone', methods=['POST'])
+def api_claim_milestone():
+    """Claim a milestone reward"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.get_json()
+    milestone_id = data.get('milestone_id')
+    user_id = session['user_id']
+
+    reward = milestone_rewards.claim_milestone(user_id, milestone_id)
+    if reward:
+        user = mall_system.get_user(user_id)
+        if user:
+            user.coins += reward.get('coins', 0)
+        return jsonify({
+            'success': True,
+            'reward': reward,
+            'message': f"Milestone claimed! +{reward.get('coins', 0)} coins"
+        })
+
+    return jsonify({'error': 'Milestone not available'}), 400
 
 # -----------------------------
 # LANGUAGE SWITCHING
