@@ -977,7 +977,96 @@ def api_claim_milestone():
     return jsonify({'error': 'Milestone not available'}), 400
  main
 
+ codex/implement-realtime-leaderboard-service
+# -----------------------------
+# LEADERBOARD STREAMING
+# -----------------------------
+
+@app.route('/leaderboard')
+def leaderboard_view():
+    """Render the real-time leaderboard view."""
+    leaderboard_type = request.args.get('type', 'coins')
+    return render_template('leaderboard.html', leaderboard_type=leaderboard_type)
+
+
+@app.route('/stream/leaderboard/<leaderboard_type>')
+def stream_leaderboard(leaderboard_type):
+    """Stream leaderboard updates using Server-Sent Events."""
+    interval = request.args.get('interval', default=5, type=int)
+    limit = request.args.get('limit', default=10, type=int)
+    return leaderboard_service.stream(leaderboard_type, interval=interval, limit=limit)
+
+# -----------------------------
+# LANGUAGE SWITCHING
+# -----------------------------
+
+@app.route('/switch-language/<language>')
+def switch_language(language):
+    """Switch user language preference"""
+    if 'user_id' in session:
+        user = mall_system.get_user(session['user_id'])
+        if user:
+            user.language = language
+    
+    session['language'] = language
+    session['lang'] = language
+    return redirect(request.referrer or url_for('index'))
+
+# -----------------------------
+# ERROR HANDLERS
+# -----------------------------
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('500.html'), 500
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    try:
+        # Check database connection
+        db_status = secure_db.check_connection()
+        
+        # Check mall system
+        mall_status = mall_system is not None
+        
+        # Check performance manager
+        perf_status = performance_manager is not None
+        
+        if db_status and mall_status and perf_status:
+            return jsonify({
+                'status': 'healthy',
+                'timestamp': datetime.now().isoformat(),
+                'services': {
+                    'database': 'ok',
+                    'mall_system': 'ok',
+                    'performance_manager': 'ok'
+                }
+            }), 200
+        else:
+            return jsonify({
+                'status': 'unhealthy',
+                'timestamp': datetime.now().isoformat(),
+                'services': {
+                    'database': 'ok' if db_status else 'error',
+                    'mall_system': 'ok' if mall_status else 'error',
+                    'performance_manager': 'ok' if perf_status else 'error'
+                }
+            }), 503
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'error',
+            'timestamp': datetime.now().isoformat(),
+            'error': str(e)
+        }), 500
+=======
 if __name__ == "__main__":
     app.run(debug=True)
+ main
 
  main
