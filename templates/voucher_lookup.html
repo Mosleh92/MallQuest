@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voucher Lookup - Deerfields Mall</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <h1 class="mb-4">Voucher Lookup</h1>
+        <form id="lookupForm" class="mb-3">
+            <div class="mb-3">
+                <label for="code" class="form-label">Voucher Code</label>
+                <input type="text" class="form-control" id="code" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Validate</button>
+        </form>
+        <div id="result"></div>
+    </div>
+    <script>
+    document.getElementById('lookupForm').addEventListener('submit', async function(e){
+        e.preventDefault();
+        const code = document.getElementById('code').value.trim();
+        const res = await fetch('/customer-service/voucher', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({code})
+        });
+        const data = await res.json();
+        const result = document.getElementById('result');
+        if(data.valid){
+            result.innerHTML = `<div class="alert alert-success">Voucher valid. Value: ${data.value}</div>`;
+        }else if(data.error){
+            result.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+        }else{
+            result.innerHTML = `<div class="alert alert-danger">${data.reason}</div>`;
+        }
+    });
+    </script>
+</body>
+</html>

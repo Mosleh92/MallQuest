@@ -30,6 +30,17 @@ def test_main_routes():
         assert 'status' in health_data
         assert health_data['status'] == 'healthy'
 
+
+def test_discounts_route():
+    """Ensure discounts page is accessible"""
+    print("\n=== Testing Discounts Route ===")
+
+    with app.test_client() as client:
+        response = client.get('/discounts')
+        print(f"Discounts page status: {response.status_code}")
+        assert response.status_code == 200
+        assert b"Current Promotions" in response.data
+
 def test_authentication_routes():
     """Test authentication routes"""
     print("\n=== Testing Authentication Routes ===")

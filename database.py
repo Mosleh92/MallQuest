@@ -27,6 +27,7 @@ class MallDatabase:
         self.create_tables()
         self.create_indexes()
         self.run_migrations()
+        self.seed_demo_user()
     
     def setup_logging(self):
         """Setup database logging"""
@@ -647,7 +648,22 @@ class MallDatabase:
         except Exception as e:
             self.logger.error(f"Error running migrations: {e}")
             raise
-    
+
+    def seed_demo_user(self):
+        """Insert a default demo user with a hashed password if it doesn't exist"""
+        try:
+            cursor = self.conn.execute("SELECT 1 FROM users WHERE user_id = ?", ("demo",))
+            if not cursor.fetchone():
+                password_hash = generate_password_hash("demo123")
+                self.conn.execute(
+                    """INSERT INTO users (user_id, name, email, password_hash)
+                       VALUES (?, ?, ?, ?)""",
+                    ("demo", "Demo User", "demo@example.com", password_hash)
+                )
+                self.conn.commit()
+        except Exception as e:
+            self.logger.error(f"Error seeding demo user: {e}")
+
     def backup_database(self, backup_path: str = None) -> bool:
         """Create a backup of the database"""
         try:
@@ -831,8 +847,8 @@ class MallDatabase:
             
             # Whitelist allowed columns for security
             allowed_columns = {
-                'name', 'email', 'phone', 'coins', 'xp', 'level', 'vip_tier', 
-                'vip_points', 'login_streak', 'max_streak', 'total_spent', 
+                'name', 'email', 'phone', 'password_hash', 'coins', 'xp', 'level', 'vip_tier',
+                'vip_points', 'login_streak', 'max_streak', 'total_spent',
                 'total_purchases', 'visited_categories', 'achievement_points',
                 'social_score', 'friends', 'team_id', 'leaderboard_position',
                 'social_achievements', 'event_participation', 'seasonal_progress',
