@@ -1,3 +1,13 @@
+"""Core game logic for MallQuest wager matches.
+
+Players stake coins to join a match. Eliminating an opponent immediately
+transfers their stake to the killer as a **kill reward**. When the match
+concludes, any remaining **pot** of staked coins is split evenly among all
+surviving members of the winning squad. If players from multiple squads
+survive, the pot is divided equally across all survivors to resolve the tie.
+Assists are not tracked – only the credited killer receives a kill reward.
+"""
+
 from __future__ import annotations
 
 import uuid
@@ -64,7 +74,12 @@ def join_match(user_id: str, match_id: str, squad_id: str) -> bool:
 
 
 def record_kill(winner_id: str, loser_id: str, match_id: str) -> bool:
-    """Record a kill and transfer coins from loser to winner."""
+    """Record a kill and transfer coins from loser to winner.
+
+    The killer receives the loser's staked amount as an immediate reward. The
+    transfer does not affect the match pot. Assists are ignored – only the
+    player credited with the kill is rewarded.
+    """
     match = _MATCHES.get(match_id)
     if not match or not match.active:
         return False
@@ -103,7 +118,13 @@ def record_kill(winner_id: str, loser_id: str, match_id: str) -> bool:
 
 
 def finish_match(match_id: str) -> Dict[str, int]:
-    """Finish a match and distribute the remaining pot among survivors."""
+    """Finish a match and distribute the remaining pot among survivors.
+
+    Each surviving teammate on the winning squad receives an equal share of
+    the pot. If members of multiple squads remain, the match ends in a tie and
+    the pot is split evenly among all surviving players. Eliminated players and
+    assists do not receive any portion of the pot.
+    """
     match = _MATCHES.get(match_id)
     if not match or not match.active:
         return {}
