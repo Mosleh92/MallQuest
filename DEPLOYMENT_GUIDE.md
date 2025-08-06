@@ -180,6 +180,8 @@ JWT_SECRET_KEY=your-secure-jwt-secret-key-here
 DATABASE_URL=sqlite:///prod_mall_gamification.db
 REDIS_ENABLED=True
 REDIS_URL=redis://localhost:6379/0
+MISSION_TEMPLATE_CACHE_BACKEND=redis
+MISSION_TEMPLATE_CACHE_TTL=600
 ```
 
 ### Step 4: Database Setup
@@ -333,6 +335,8 @@ docker-compose --profile staging up -d
 | `DATABASE_URL` | Database connection | sqlite:///mall_gamification.db | Yes |
 | `REDIS_URL` | Redis connection | redis://localhost:6379/0 | No |
 | `REDIS_ENABLED` | Enable Redis caching | True | No |
+| `MISSION_TEMPLATE_CACHE_BACKEND` | Mission template cache backend (`memory` or `redis`) | memory | No |
+| `MISSION_TEMPLATE_CACHE_TTL` | Cache TTL for mission templates (seconds) | 300 | No |
 | `LOG_LEVEL` | Logging level | INFO | No |
 | `DEBUG` | Debug mode | False | No |
 | `MFA_ENABLED` | Enable MFA | True | No |
@@ -360,6 +364,17 @@ REDIS_URL=redis://redis-server:6379/0
 
 # Redis with authentication
 REDIS_URL=redis://:password@redis-server:6379/0
+```
+
+### Mission Template Cache
+```bash
+# In-memory cache (default)
+MISSION_TEMPLATE_CACHE_BACKEND=memory
+MISSION_TEMPLATE_CACHE_TTL=300
+
+# Redis cache
+MISSION_TEMPLATE_CACHE_BACKEND=redis
+MISSION_TEMPLATE_CACHE_TTL=600
 ```
 
 ## 🔐 Security Setup

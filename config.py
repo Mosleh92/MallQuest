@@ -46,6 +46,10 @@ class BaseConfig:
     REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
     REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
     REDIS_DB = int(os.getenv('REDIS_DB', '0'))
+
+    # Mission Template Cache Configuration
+    MISSION_TEMPLATE_CACHE_BACKEND = os.getenv('MISSION_TEMPLATE_CACHE_BACKEND', 'memory')
+    MISSION_TEMPLATE_CACHE_TTL = int(os.getenv('MISSION_TEMPLATE_CACHE_TTL', '300'))
     
     # Security Configuration
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', secrets.token_hex(32))
@@ -184,6 +188,14 @@ class BaseConfig:
             'async_workers': cls.ASYNC_WORKERS,
             'memory_limit_mb': cls.MEMORY_LIMIT_MB,
             'performance_monitoring': cls.PERFORMANCE_MONITORING
+        }
+
+    @classmethod
+    def get_mission_template_cache_config(cls) -> Dict[str, Any]:
+        """Get mission template cache configuration"""
+        return {
+            'backend': cls.MISSION_TEMPLATE_CACHE_BACKEND,
+            'ttl': cls.MISSION_TEMPLATE_CACHE_TTL
         }
     
     @classmethod

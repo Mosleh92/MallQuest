@@ -6,18 +6,89 @@ Creates personalized missions based on user behavior and mall activities
 
 import random
 import json
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from database import db
+from config import BaseConfig
+
+try:
+    import redis
+except Exception:
+    redis = None
+
+
+class TemplateCache:
+    """Simple cache for mission templates with optional Redis backend."""
+
+    def __init__(self, backend: str = "memory", ttl: int = 300):
+        self.backend = backend
+        self.ttl = ttl
+        self._memory: Dict[str, Any] = {}
+        self._redis = None
+
+        if self.backend == "redis" and redis:
+            try:
+                redis_config = BaseConfig.get_redis_config()
+                self._redis = redis.Redis(
+                    host=redis_config["host"],
+                    port=redis_config["port"],
+                    db=redis_config["db"],
+                    decode_responses=True,
+                )
+            except Exception as e:
+                print(f"Redis cache unavailable ({e}), falling back to memory cache")
+                self.backend = "memory"
+
+    def get(self, key: str):
+        if self.backend == "redis" and self._redis:
+            data = self._redis.get(key)
+            if data:
+                try:
+                    return json.loads(data)
+                except Exception:
+                    return None
+            return None
+        entry = self._memory.get(key)
+        if not entry:
+            return None
+        value, expires = entry
+        if expires > time.time():
+            return value
+        del self._memory[key]
+        return None
+
+    def set(self, key: str, value: Any):
+        if self.backend == "redis" and self._redis:
+            try:
+                self._redis.setex(key, self.ttl, json.dumps(value))
+            except Exception as e:
+                print(f"Failed to set Redis cache: {e}")
+        else:
+            self._memory[key] = (value, time.time() + self.ttl)
+
+    def clear(self):
+        if self.backend == "redis" and self._redis:
+            try:
+                self._redis.flushdb()
+            except Exception as e:
+                print(f"Failed to clear Redis cache: {e}")
+        else:
+            self._memory.clear()
 
 class AIMissionGenerator:
     """AI-powered mission generator for personalized user experiences"""
-    
+
     def __init__(self):
+        cache_config = BaseConfig.get_mission_template_cache_config()
+        self.template_cache = TemplateCache(
+            backend=cache_config.get("backend", "memory"),
+            ttl=cache_config.get("ttl", 300),
+        )
         self.mission_templates = self._load_mission_templates()
         self.user_patterns = {}
         self.mall_zones = [
-            "Fashion", "Electronics", "Food", "Beauty", "Sports", 
+            "Fashion", "Electronics", "Food", "Beauty", "Sports",
             "Home", "Entertainment", "Kids", "Luxury", "Services"
         ]
         self.mission_types = [
@@ -27,7 +98,10 @@ class AIMissionGenerator:
     
     def _load_mission_templates(self) -> Dict[str, List[Dict]]:
         """Load mission templates from configuration"""
-        return {
+        cached = self.template_cache.get("mission_templates")
+        if cached:
+            return cached
+        templates = {
             "receipt_scan": [
                 {
                     "title": "🧾 Scan {count} Receipts",
@@ -157,6 +231,13 @@ class AIMissionGenerator:
                 }
             ]
         }
+        self.template_cache.set("mission_templates", templates)
+        return templates
+
+    def refresh_template_cache(self) -> None:
+        """Clear mission template cache and reload templates"""
+        self.template_cache.clear()
+        self.mission_templates = self._load_mission_templates()
     
     def analyze_user_patterns(self, user_id: str) -> Dict[str, Any]:
         """Analyze user behavior patterns for mission personalization"""
@@ -394,7 +475,12 @@ class AIMissionGenerator:
     def _generate_mission_by_type(self, mission_type: str, patterns: Dict[str, Any], user: Dict) -> Optional[Dict[str, Any]]:
         """Generate a specific mission based on type and user patterns"""
         try:
-            templates = self.mission_templates.get(mission_type, [])
+            cache_key = f"templates:{mission_type}"
+            templates = self.template_cache.get(cache_key)
+            if not templates:
+                templates = self.mission_templates.get(mission_type, [])
+                if templates:
+                    self.template_cache.set(cache_key, templates)
             if not templates:
                 return None
             
