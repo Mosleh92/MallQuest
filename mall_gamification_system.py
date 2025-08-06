@@ -1268,7 +1268,7 @@ class MallGamificationSystem:
         # Add sample events
         self.event_scheduler.add_event("Summer Sale", "2024-06-01", "2024-06-30", 1.5, ["Summer Coins"])
         self.event_scheduler.add_event("Back to School", "2024-08-15", "2024-09-15", 1.3, ["School Supplies"])
- codex/add-flash_events.py-for-time-bound-events
+
         self.flash_event_admin.define_zone("center_court", (0.0, 0.0), 50.0)
         self.flash_event_admin.schedule_event(
             "Weekend Blast",
@@ -1277,6 +1277,7 @@ class MallGamificationSystem:
             ["center_court"],
             multiplier=1.2,
         )
+        self.activate_events()
 
     def activate_events(self):
         """Update active flash events based on current time."""
@@ -1342,7 +1343,6 @@ class MallGamificationSystem:
         })
         return {'winner': winner_id, 'loser': loser_id, 'reward': reward}
     
- main
     def create_user(self, user_id: str, language: str = "en") -> User:
         """Create a new user with smart caching"""
         if SMART_CACHE_AVAILABLE:
