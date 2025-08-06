@@ -109,7 +109,12 @@ mall_db = MallDatabase()
  main
  main
 coin_duel_manager = CoinDuelManager(mall_system)
+ ficjd7-codex/develop-milestone-rewards-system
+
+milestone_rewards = MilestoneRewards("milestone_rewards.db")
+=======
 milestone_rewards = MilestoneRewards()
+ main
 
 
 @app.context_processor
@@ -520,6 +525,8 @@ def player_dashboard(user_id):
 
     user.login()
     dashboard_data = mall_system.get_user_dashboard(user_id)
+ ficjd7-codex/develop-milestone-rewards-system
+=======
  codex/refactor-for-tenant-database-schemas
 =======
  s1jkhp-codex/add-localization-framework-to-web_interface.py
@@ -529,19 +536,27 @@ def player_dashboard(user_id):
                          dashboard=dashboard_data,
                         duels=coin_duel_manager.get_user_duels(user_id))
  main
+ main
 
  main
     milestone_rewards.update_progress(user_id, user.xp)
     available_milestones = milestone_rewards.get_available_milestones(user_id)
 
+ ficjd7-codex/develop-milestone-rewards-system
+    return render_template(
+        'player_dashboard.html',
+=======
  s1jkhp-codex/add-localization-framework-to-web_interface.py
     return render_template(
         "player_dashboard.html",
+ main
         user=user,
         dashboard=dashboard_data,
         duels=coin_duel_manager.get_user_duels(user_id),
         milestones=available_milestones,
     )
+ ficjd7-codex/develop-milestone-rewards-system
+=======
 
 
     return render_template('player_dashboard.html',
@@ -552,6 +567,7 @@ def player_dashboard(user_id):
                          duels=coin_duel_manager.get_user_duels(user_id))
 =======
                          milestones=available_milestones)
+ main
  main
 
 @app.route('/admin')
