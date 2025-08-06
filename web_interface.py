@@ -704,13 +704,16 @@ def api_claim_milestone():
 @app.route('/leaderboard')
 def leaderboard_view():
     """Render the real-time leaderboard view."""
-    return render_template('leaderboard.html')
+    leaderboard_type = request.args.get('type', 'coins')
+    return render_template('leaderboard.html', leaderboard_type=leaderboard_type)
 
 
 @app.route('/stream/leaderboard/<leaderboard_type>')
 def stream_leaderboard(leaderboard_type):
     """Stream leaderboard updates using Server-Sent Events."""
-    return leaderboard_service.stream(leaderboard_type)
+    interval = request.args.get('interval', default=5, type=int)
+    limit = request.args.get('limit', default=10, type=int)
+    return leaderboard_service.stream(leaderboard_type, interval=interval, limit=limit)
 
 # -----------------------------
 # LANGUAGE SWITCHING
