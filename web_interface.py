@@ -57,7 +57,7 @@ leaderboard_service = LeaderboardService(mall_system)
 <codex/add-coin-duel-functionality-to-project
 coin_duel_manager = CoinDuelManager(mall_system)
 
-milestone_rewards = MilestoneRewards()
+milestone_rewards = MilestoneRewards("milestone_rewards.db")
 
 # Inject translation function into templates
 @app.context_processor
@@ -383,20 +383,17 @@ def player_dashboard(user_id):
 
     user.login()
     dashboard_data = mall_system.get_user_dashboard(user_id)
- codex/add-coin-duel-functionality-to-project
-    return render_template('player_dashboard.html',
-                         user=user,
-                         dashboard=dashboard_data,
-                        duels=coin_duel_manager.get_user_duels(user_id))
 
     milestone_rewards.update_progress(user_id, user.xp)
     available_milestones = milestone_rewards.get_available_milestones(user_id)
 
-    return render_template('player_dashboard.html',
-                         user=user,
-                         dashboard=dashboard_data,
-                         milestones=available_milestones)
- main
+    return render_template(
+        'player_dashboard.html',
+        user=user,
+        dashboard=dashboard_data,
+        duels=coin_duel_manager.get_user_duels(user_id),
+        milestones=available_milestones,
+    )
 
 @app.route('/admin')
 def admin_dashboard():
