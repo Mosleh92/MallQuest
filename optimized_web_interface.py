@@ -13,10 +13,11 @@ from security_module import (
     get_secure_database, get_rate_limiter
 )
 from performance_module import (
-    PerformanceManager, AsyncTaskManager, CachedDatabase, 
+    PerformanceManager, AsyncTaskManager, CachedDatabase,
     PerformanceMonitor, OptimizedGraphicsEngine, record_performance_event,
     get_performance_manager, get_performance_monitor, get_optimized_graphics
 )
+from discounts_service import DiscountsService
 import time
 import asyncio
 import logging
@@ -36,6 +37,9 @@ security_manager = get_security_manager()
 secure_database = get_secure_database()
 rate_limiter = get_rate_limiter()
 input_validator = InputValidator()
+
+# Initialize discounts service
+discounts_service = DiscountsService()
 
 # Initialize performance systems
 performance_manager = get_performance_manager()
@@ -67,8 +71,16 @@ def index():
     # Record performance
     response_time = time.time() - start_time
     record_performance_event('main_page', response_time)
-    
+
     return render_template('index.html')
+
+
+@app.route('/discounts')
+@rate_limiter.limit(max_requests=30, window_seconds=60)
+def discounts():
+    """Display current mall promotions."""
+    offers = discounts_service.get_discounts()
+    return render_template('discounts.html', offers=offers)
 
 @app.route('/login', methods=['GET', 'POST'])
 @rate_limiter.limit(max_requests=5, window_seconds=300)
