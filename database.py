@@ -33,6 +33,7 @@ class User(Base):
     date_of_birth = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_entry_at = Column(DateTime, nullable=True)
 
 
 class Receipt(Base):
@@ -46,6 +47,17 @@ class Receipt(Base):
     status = Column(String, default="pending")
     items = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MallEntry(Base):
+    __tablename__ = "mall_entries"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    location = Column(String)
+    device_info = Column(JSON)
+    latitude = Column(Float)
+    longitude = Column(Float)
 
 
 class MallDatabase:
@@ -157,6 +169,36 @@ class MallDatabase:
         try:
             rows = session.query(Receipt).filter_by(user_id=user_id).all()
             return [{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows]
+        finally:
+            session.close()
+
+    def log_mall_entry(
+        self,
+        user_id: str,
+        location: str,
+        device_info: Dict[str, Any],
+        coords: Dict[str, float],
+    ) -> bool:
+        """Insert a mall entry and update the user's last entry timestamp."""
+
+        session = self._session_for_key(user_id)
+        try:
+            entry = MallEntry(
+                user_id=user_id,
+                location=location,
+                device_info=device_info,
+                latitude=coords.get("latitude"),
+                longitude=coords.get("longitude"),
+            )
+            session.add(entry)
+            user = session.get(User, user_id)
+            if user:
+                user.last_entry_at = entry.timestamp
+            session.commit()
+            return True
+        except Exception:
+            session.rollback()
+            return False
         finally:
             session.close()
 
