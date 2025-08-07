@@ -5,7 +5,12 @@ import os
 from datetime import datetime, timedelta
 from collections import defaultdict
 
+ codex/add-crm-route-and-template
 from database import MallDatabase, User, Receipt
+=======
+from database import MallDatabase
+from app.services import segmentation_service
+ main
 from i18n import translator, get_locale
 from mallquest_wager.wager_routes import wager_bp
 
@@ -27,6 +32,7 @@ if JWTManager:
     jwt = JWTManager(app)
 
 mall_db = MallDatabase()
+segmentation_service.schedule_daily_update(mall_db)
 app.register_blueprint(wager_bp, url_prefix='/wager')
 
 # Seed demo user for testing and development
@@ -73,6 +79,7 @@ def login():
     return jsonify({'success': True, 'user_id': user_id})
 
 
+ codex/add-crm-route-and-template
 @app.route('/admin/crm', methods=['GET', 'POST'])
 def admin_crm():
     """CRM dashboard providing user metrics and campaign tools."""
@@ -176,6 +183,38 @@ def admin_crm():
         entry_data=entry_data,
         retention_data=retention_data,
     )
+=======
+ codex/add-last_purchase_at-to-user-model
+@app.route('/admin/inactive-users')
+def inactive_users():
+    """Return lists of dormant and lost users."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = mall_db.get_user(user_id)
+    if not user or user.get('role') != 'admin':
+        return jsonify({'error': 'Forbidden'}), 403
+    segment = request.args.get('segment')
+    if segment:
+        users = segmentation_service.get_users_by_segment(segment)
+        return jsonify({segment: users})
+    return jsonify(
+        {
+            'dormant': segmentation_service.get_users_by_segment('dormant'),
+            'lost': segmentation_service.get_users_by_segment('lost'),
+        }
+    )
+=======
+@app.route('/api/purchases', methods=['GET'])
+def purchase_stats():
+    """Return aggregated purchase statistics."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'authentication required'}), 401
+    range_param = request.args.get('range', 'daily')
+    stats = mall_db.get_purchase_stats(range_param)
+    return jsonify({'range': range_param, 'stats': stats})
+ main
+ main
 
 
 if __name__ == '__main__':
