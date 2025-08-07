@@ -1,0 +1,51 @@
+openapi: 3.0.0
+info:
+  title: MallQuest API
+  version: '0.1'
+servers:
+  - url: https://api.mallquest.local
+paths:
+  /login:
+    post:
+      summary: Authenticate a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful login
+        '401':
+          description: Invalid credentials
+  /api/pos/purchase:
+    post:
+      summary: Record a point-of-sale purchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                store_id:
+                  type: string
+                amount:
+                  type: number
+                items:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Purchase recorded
+        '400':
+          description: Invalid payload
