@@ -5,12 +5,8 @@ import os
 from datetime import datetime, timedelta
 from collections import defaultdict
 
- codex/add-crm-route-and-template
 from database import MallDatabase, User, Receipt
-=======
-from database import MallDatabase
 from app.services import segmentation_service
- main
 from i18n import translator, get_locale
 from mallquest_wager.wager_routes import wager_bp
 from mall_gamification_system import MallGamificationSystem
@@ -80,8 +76,6 @@ def login():
     session['user_id'] = user_id
     return jsonify({'success': True, 'user_id': user_id})
 
-
- codex/add-post-endpoint-for-purchases
 @app.route('/api/pos/purchase', methods=['POST'])
 def pos_purchase():
     """Record POS purchase and forward to purchase logger."""
@@ -105,8 +99,6 @@ def pos_purchase():
         return jsonify({'error': 'Unable to record purchase'}), 400
 
     return jsonify({'success': True}), 201
-=======
- codex/add-crm-route-and-template
 @app.route('/admin/crm', methods=['GET', 'POST'])
 def admin_crm():
     """CRM dashboard providing user metrics and campaign tools."""
@@ -210,8 +202,6 @@ def admin_crm():
         entry_data=entry_data,
         retention_data=retention_data,
     )
-=======
- codex/add-last_purchase_at-to-user-model
 @app.route('/admin/inactive-users')
 def inactive_users():
     """Return lists of dormant and lost users."""
@@ -231,7 +221,6 @@ def inactive_users():
             'lost': segmentation_service.get_users_by_segment('lost'),
         }
     )
-=======
 @app.route('/api/purchases', methods=['GET'])
 def purchase_stats():
     """Return aggregated purchase statistics."""
@@ -240,9 +229,6 @@ def purchase_stats():
     range_param = request.args.get('range', 'daily')
     stats = mall_db.get_purchase_stats(range_param)
     return jsonify({'range': range_param, 'stats': stats})
- main
- main
- main
 
 
 if __name__ == '__main__':
