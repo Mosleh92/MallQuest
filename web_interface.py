@@ -13,6 +13,7 @@ from app.services import segmentation_service
  main
 from i18n import translator, get_locale
 from mallquest_wager.wager_routes import wager_bp
+from mall_gamification_system import MallGamificationSystem
 
 REQUIRED_ENV = ["SECRET_KEY", "DATABASE_URL", "JWT_SECRET_KEY"]
 for var in REQUIRED_ENV:
@@ -34,6 +35,7 @@ if JWTManager:
 mall_db = MallDatabase()
 segmentation_service.schedule_daily_update(mall_db)
 app.register_blueprint(wager_bp, url_prefix='/wager')
+mall_system = MallGamificationSystem()
 
 # Seed demo user for testing and development
 if not mall_db.get_user('demo'):
@@ -79,6 +81,31 @@ def login():
     return jsonify({'success': True, 'user_id': user_id})
 
 
+ codex/add-post-endpoint-for-purchases
+@app.route('/api/pos/purchase', methods=['POST'])
+def pos_purchase():
+    """Record POS purchase and forward to purchase logger."""
+    data = request.get_json() or {}
+    required = ['store_id', 'user_id', 'amount', 'items', 'timestamp']
+    for field in required:
+        if field not in data:
+            return jsonify({'error': f'{field} is required'}), 400
+
+    store_id = data['store_id']
+    user_id = data['user_id']
+    items = data['items']
+
+    try:
+        amount = float(data['amount'])
+        timestamp = datetime.fromisoformat(data['timestamp'])
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid amount or timestamp'}), 400
+
+    if not mall_system.add_purchase_record(store_id, user_id, amount, items, timestamp):
+        return jsonify({'error': 'Unable to record purchase'}), 400
+
+    return jsonify({'success': True}), 201
+=======
  codex/add-crm-route-and-template
 @app.route('/admin/crm', methods=['GET', 'POST'])
 def admin_crm():
@@ -213,6 +240,7 @@ def purchase_stats():
     range_param = request.args.get('range', 'daily')
     stats = mall_db.get_purchase_stats(range_param)
     return jsonify({'range': range_param, 'stats': stats})
+ main
  main
  main
 

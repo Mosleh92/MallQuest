@@ -161,6 +161,42 @@
                         </div>
                     </div>
 
+                    <!-- Purchase History -->
+                    <div class="dashboard-card">
+                        <h4><i class="fas fa-shopping-cart"></i> Purchase History</h4>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Customer ID</th>
+                                        <th>Amount (AED)</th>
+                                        <th>Items</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for customer_id, records in dashboard.purchase_history.items() %}
+                                        {% for record in records %}
+                                        <tr>
+                                            <td>{{ customer_id }}</td>
+                                            <td>{{ "{:,.2f}".format(record.amount) }}</td>
+                                            <td>{{ record.items }}</td>
+                                            <td>{{ record.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {% if dashboard.purchase_history|length == 0 %}
+                                    <tr>
+                                        <td colspan="4">
+                                            <div class="alert alert-info mb-0">No purchases yet</div>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <!-- Special Offers -->
                     <div class="dashboard-card">
                         <h4><i class="fas fa-tags"></i> Special Offers</h4>

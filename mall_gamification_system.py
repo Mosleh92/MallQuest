@@ -1099,11 +1099,19 @@ class Shopkeeper:
         self.reviews = []
         self.special_offers = []
         self.inventory = []
-    
-    def add_sale(self, amount: float, customer_id: str):
+        self.purchase_history = defaultdict(list)
+
+    def add_sale(self, amount: float, customer_id: str, items=None, timestamp=None):
         self.total_sales += amount
-        self.customer_count += 1
-        
+        if not self.purchase_history[customer_id]:
+            self.customer_count += 1
+        record = {
+            "amount": amount,
+            "items": items or [],
+            "timestamp": timestamp or datetime.now()
+        }
+        self.purchase_history[customer_id].append(record)
+
         # Generate special offer based on sales performance
         if self.total_sales > 10000:
             self.special_offers.append({
@@ -1493,6 +1501,25 @@ class MallGamificationSystem:
             "celebration_level": reward_result['celebration_level'],
             "multipliers": reward_result['multiplier_breakdown']
         }
+
+    def add_purchase_record(self, store_id: str, user_id: str, amount: float, items, timestamp: datetime) -> bool:
+        """Record purchase data for store analytics and user history."""
+        shopkeeper = self.shopkeepers.get(store_id)
+        if not shopkeeper:
+            return False
+        shopkeeper.add_sale(amount, user_id, items, timestamp)
+
+        user = self.get_user(user_id)
+        if user:
+            user.purchase_history.append({
+                "store_id": store_id,
+                "amount": amount,
+                "items": items,
+                "timestamp": timestamp,
+            })
+            user.total_spent += amount
+            user.total_purchases += 1
+        return True
     
     def generate_user_missions(self, user_id: str, mission_type: str = "daily"):
         """Generate personalized missions using AI"""
@@ -1873,7 +1900,8 @@ class MallGamificationSystem:
                 "rating": shopkeeper.rating
             },
             "recent_reviews": shopkeeper.reviews[-5:],
-            "special_offers": shopkeeper.special_offers
+            "special_offers": shopkeeper.special_offers,
+            "purchase_history": shopkeeper.purchase_history
         }
     
     def get_customer_service_dashboard(self):
