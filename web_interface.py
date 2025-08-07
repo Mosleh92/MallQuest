@@ -72,5 +72,15 @@ def login():
     return jsonify({'success': True, 'user_id': user_id})
 
 
+@app.route('/api/purchases', methods=['GET'])
+def purchase_stats():
+    """Return aggregated purchase statistics."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'authentication required'}), 401
+    range_param = request.args.get('range', 'daily')
+    stats = mall_db.get_purchase_stats(range_param)
+    return jsonify({'range': range_param, 'stats': stats})
+
+
 if __name__ == '__main__':
     app.run(debug=True)
