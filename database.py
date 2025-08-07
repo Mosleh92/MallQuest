@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import os
 import hashlib
+ codex/add-last_purchase_at-to-user-model
 import uuid
 from datetime import datetime
+=======
+from datetime import datetime, timedelta
+ main
 from typing import Any, Dict, Optional, List
 
-from sqlalchemy import create_engine, Column, String, Integer, Float, JSON, DateTime
+from sqlalchemy import create_engine, Column, String, Integer, Float, JSON, DateTime, func
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import make_url
@@ -35,6 +39,7 @@ class User(Base):
     date_of_birth = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_entry_at = Column(DateTime, nullable=True)
 
 
 class Receipt(Base):
@@ -48,6 +53,29 @@ class Receipt(Base):
     status = Column(String, default="pending")
     items = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+ codex/add-purchasehistory-model-and-api
+class PurchaseHistory(Base):
+    __tablename__ = "purchase_history"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    store_id = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    upload_type = Column(String, nullable=False)
+    receipt_url = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+=======
+class MallEntry(Base):
+    __tablename__ = "mall_entries"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    location = Column(String)
+    device_info = Column(JSON)
+    latitude = Column(Float)
+    longitude = Column(Float)
+ main
 
 
 class MallDatabase:
@@ -198,6 +226,78 @@ class MallDatabase:
         finally:
             session.close()
 
+ codex/add-purchasehistory-model-and-api
+    def add_purchase_record(self, data: Dict[str, Any]) -> bool:
+        session = self._session_for_key(data["user_id"])
+        try:
+            record = PurchaseHistory(**data)
+            session.add(record)
+=======
+    def log_mall_entry(
+        self,
+        user_id: str,
+        location: str,
+        device_info: Dict[str, Any],
+        coords: Dict[str, float],
+    ) -> bool:
+        """Insert a mall entry and update the user's last entry timestamp."""
+
+        session = self._session_for_key(user_id)
+        try:
+            entry = MallEntry(
+                user_id=user_id,
+                location=location,
+                device_info=device_info,
+                latitude=coords.get("latitude"),
+                longitude=coords.get("longitude"),
+            )
+            session.add(entry)
+            user = session.get(User, user_id)
+            if user:
+                user.last_entry_at = entry.timestamp
+ main
+            session.commit()
+            return True
+        except Exception:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+ codex/add-purchasehistory-model-and-api
+    def get_purchase_stats(self, range: str) -> Dict[str, Dict[str, float]]:
+        if range == "daily":
+            start = datetime.utcnow() - timedelta(days=1)
+        elif range == "weekly":
+            start = datetime.utcnow() - timedelta(weeks=1)
+        elif range == "monthly":
+            start = datetime.utcnow() - timedelta(days=30)
+        else:
+            start = None
+
+        stats: Dict[str, Dict[str, float]] = {}
+        for maker in self.sessions:
+            session = maker()
+            try:
+                query = session.query(
+                    PurchaseHistory.store_id,
+                    func.count().label("count"),
+                    func.sum(PurchaseHistory.amount).label("total"),
+                )
+                if start:
+                    query = query.filter(PurchaseHistory.timestamp >= start)
+                query = query.group_by(PurchaseHistory.store_id)
+                for store_id, count, total in query.all():
+                    if store_id not in stats:
+                        stats[store_id] = {"count": 0, "total": 0.0}
+                    stats[store_id]["count"] += count
+                    stats[store_id]["total"] += float(total or 0.0)
+            finally:
+                session.close()
+        return stats
+
+=======
+ main
     def close(self) -> None:
         for engine in self.engines:
             engine.dispose()

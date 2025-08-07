@@ -74,6 +74,7 @@ def login():
     return jsonify({'success': True, 'user_id': user_id})
 
 
+ codex/add-last_purchase_at-to-user-model
 @app.route('/admin/inactive-users')
 def inactive_users():
     """Return lists of dormant and lost users."""
@@ -93,6 +94,16 @@ def inactive_users():
             'lost': segmentation_service.get_users_by_segment('lost'),
         }
     )
+=======
+@app.route('/api/purchases', methods=['GET'])
+def purchase_stats():
+    """Return aggregated purchase statistics."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'authentication required'}), 401
+    range_param = request.args.get('range', 'daily')
+    stats = mall_db.get_purchase_stats(range_param)
+    return jsonify({'range': range_param, 'stats': stats})
+ main
 
 
 if __name__ == '__main__':

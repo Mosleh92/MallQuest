@@ -8,10 +8,11 @@ rate limiting, input validation, and secure database operations.
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from mall_gamification_system import MallGamificationSystem, User
 from security_module import (
-    SecurityManager, require_auth, SecureDatabase, RateLimiter, 
+    SecurityManager, require_auth, SecureDatabase, RateLimiter,
     InputValidator, log_security_event, get_security_manager,
     get_secure_database, get_rate_limiter
 )
+from database import MallDatabase
 import json
 from datetime import datetime
 
@@ -24,6 +25,7 @@ security_manager = get_security_manager()
 secure_database = get_secure_database()
 rate_limiter = get_rate_limiter()
 input_validator = InputValidator()
+mall_db = MallDatabase()
 
 # -----------------------------
 # AUTHENTICATION ROUTES
@@ -190,10 +192,18 @@ def secure_submit_receipt():
     
     # Process receipt securely
     result = mall_system.process_receipt(user_id, amount, store)
-    
+
+    mall_db.add_purchase_record({
+        'user_id': user_id,
+        'store_id': store,
+        'amount': amount,
+        'upload_type': data.get('upload_type', 'ocr'),
+        'receipt_url': data.get('receipt_url')
+    })
+
     # Log the receipt submission
     log_security_event(user_id, 'receipt_submitted', f'Receipt submitted: {store} - {amount}')
-    
+
     user = mall_system.get_user(user_id)
     return jsonify({
         'success': True,
