@@ -6,7 +6,19 @@ from database import Base
 
 
 class WagerMatch(Base):
-    """Represents a wager match with map and safe zone details."""
+    """Represents a wager match with map and safe-zone details.
+
+    The ``safe_zones`` JSON column stores the shrink timeline as a list of
+    stages. Each stage includes:
+
+    * ``radius`` – current safe-zone radius
+    * ``shrink_duration`` – seconds taken to reach the next stage
+    * ``damage_per_tick`` – damage applied outside the zone each tick
+
+    Small matches (20 players or fewer) use shorter durations and smaller radii
+    while large matches start wider, shrink more gradually, and inflict higher
+    damage per tick as the match progresses.
+    """
 
     __tablename__ = "wager_matches"
 
