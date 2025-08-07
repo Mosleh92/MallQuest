@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 
 from database import MallDatabase
+from app.services import segmentation_service
 from i18n import translator, get_locale
 from mallquest_wager.wager_routes import wager_bp
 
@@ -26,6 +27,7 @@ if JWTManager:
     jwt = JWTManager(app)
 
 mall_db = MallDatabase()
+segmentation_service.schedule_daily_update(mall_db)
 app.register_blueprint(wager_bp, url_prefix='/wager')
 
 # Seed demo user for testing and development
@@ -70,6 +72,27 @@ def login():
 
     session['user_id'] = user_id
     return jsonify({'success': True, 'user_id': user_id})
+
+
+@app.route('/admin/inactive-users')
+def inactive_users():
+    """Return lists of dormant and lost users."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = mall_db.get_user(user_id)
+    if not user or user.get('role') != 'admin':
+        return jsonify({'error': 'Forbidden'}), 403
+    segment = request.args.get('segment')
+    if segment:
+        users = segmentation_service.get_users_by_segment(segment)
+        return jsonify({segment: users})
+    return jsonify(
+        {
+            'dormant': segmentation_service.get_users_by_segment('dormant'),
+            'lost': segmentation_service.get_users_by_segment('lost'),
+        }
+    )
 
 
 if __name__ == '__main__':

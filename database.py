@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import hashlib
+import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional, List
 
@@ -29,6 +30,7 @@ class User(Base):
     vip_tier = Column(String, default="Bronze")
     vip_points = Column(Integer, default=0)
     total_spent = Column(Float, default=0.0)
+    last_purchase_at = Column(DateTime, nullable=True)
     language = Column(String, default="en")
     date_of_birth = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -144,6 +146,42 @@ class MallDatabase:
         try:
             receipt = Receipt(**data)
             session.add(receipt)
+            session.commit()
+            return True
+        except Exception:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def add_purchase_record(
+        self,
+        user_id: str,
+        amount: float,
+        store: str,
+        category: Optional[str] = None,
+        currency: str = "AED",
+        items: Optional[Any] = None,
+    ) -> bool:
+        """Add a purchase record and update user's last purchase timestamp."""
+        session = self._session_for_key(user_id)
+        try:
+            receipt = Receipt(
+                receipt_id=str(uuid.uuid4()),
+                user_id=user_id,
+                store=store,
+                category=category,
+                amount=amount,
+                currency=currency,
+                status="completed",
+                items=items,
+                created_at=datetime.utcnow(),
+            )
+            session.add(receipt)
+            user = session.get(User, user_id)
+            if user:
+                user.last_purchase_at = datetime.utcnow()
+                user.total_spent = (user.total_spent or 0.0) + amount
             session.commit()
             return True
         except Exception:
