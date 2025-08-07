@@ -9,13 +9,16 @@ import platform
 import re
 import time
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 
+from app.services.presence_service import PresenceService
+from database import MallDatabase
+
 class WiFiVerification:
-    """Enhanced WiFi verification system with actual network detection"""
-    
-    def __init__(self):
+    """Enhanced WiFi/GPS verification system integrated with presence tracking."""
+
+    def __init__(self, presence_service: Optional[PresenceService] = None):
         self.mall_ssids = [
             "Deerfields_Free_WiFi",
             "Deerfields_Mall_WiFi",
@@ -34,6 +37,7 @@ class WiFiVerification:
         self.cache_duration = 30  # seconds
         self.network_cache = {}
         self.last_scan = None
+        self.presence_service = presence_service
     
     def setup_logging(self):
         """Setup logging for WiFi verification"""
@@ -416,28 +420,52 @@ class WiFiVerification:
             self.logger.error(f"Error scanning Linux networks: {e}")
             return []
     
-    def is_inside_mall(self, ssid: str = None) -> bool:
-        """Check if user is connected to mall WiFi"""
+    def is_inside_mall(
+        self,
+        ssid: str = None,
+        user_id: Optional[str] = None,
+        device_info: Optional[Dict[str, Any]] = None,
+        coords: Optional[Dict[str, float]] = None,
+    ) -> bool:
+        """Check if user is connected to mall WiFi.
+
+        When ``user_id`` is supplied and the user is connected to a mall network
+        a presence event is recorded.
+        """
         try:
             current_network = self.get_current_network()
-            
+
             if not current_network:
                 return False
-            
+
             current_ssid = current_network.get('ssid', '')
-            
+
             # Check if current SSID is a mall network
             if current_ssid in self.allowed_networks:
+                if user_id and self.presence_service:
+                    self.presence_service.capture_wifi_event(
+                        user_id,
+                        current_ssid,
+                        device_info or {},
+                        coords or {},
+                    )
                 self.logger.info(f"Connected to mall network: {current_ssid}")
                 return True
-            
+
             # Check if specified SSID matches
             if ssid and current_ssid == ssid:
+                if user_id and self.presence_service:
+                    self.presence_service.capture_wifi_event(
+                        user_id,
+                        current_ssid,
+                        device_info or {},
+                        coords or {},
+                    )
                 return True
-            
+
             self.logger.info(f"Not connected to mall network. Current: {current_ssid}")
             return False
-            
+
         except Exception as e:
             self.logger.error(f"Error checking mall connection: {e}")
             return False
@@ -460,6 +488,29 @@ class WiFiVerification:
             
         except Exception as e:
             self.logger.error(f"Error checking staff connection: {e}")
+            return False
+
+    def record_gps_event(
+        self,
+        user_id: str,
+        coords: Dict[str, float],
+        device_info: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """Record a GPS-based mall presence event.
+
+        This is a light wrapper around ``PresenceService.capture_gps_event`` and
+        expects coordinates already verified by the caller.
+        """
+        if not self.presence_service:
+            return False
+        try:
+            return self.presence_service.capture_gps_event(
+                user_id,
+                coords,
+                device_info or {},
+            )
+        except Exception as exc:  # pragma: no cover - safety
+            self.logger.error(f"Error recording GPS event: {exc}")
             return False
     
     def get_network_quality(self) -> Dict[str, any]:
@@ -535,8 +586,18 @@ class WiFiVerification:
             self.logger.error(f"Error getting mall networks: {e}")
             return []
     
-    def validate_network_access(self, required_network: str = None) -> Dict[str, any]:
-        """Comprehensive network access validation"""
+    def validate_network_access(
+        self,
+        required_network: str = None,
+        user_id: Optional[str] = None,
+        device_info: Optional[Dict[str, Any]] = None,
+        coords: Optional[Dict[str, float]] = None,
+    ) -> Dict[str, any]:
+        """Comprehensive network access validation.
+
+        If ``user_id`` is provided and access is granted, a presence event is
+        recorded using ``PresenceService``.
+        """
         try:
             current_network = self.get_current_network()
             network_quality = self.get_network_quality()
@@ -557,6 +618,13 @@ class WiFiVerification:
             
             # Check if connected to mall network
             if current_ssid in self.allowed_networks:
+                if user_id and self.presence_service:
+                    self.presence_service.capture_wifi_event(
+                        user_id,
+                        current_ssid,
+                        device_info or {},
+                        coords or {},
+                    )
                 return {
                     "access_granted": True,
                     "reason": "mall_network",
@@ -568,6 +636,13 @@ class WiFiVerification:
             
             # Check if connected to staff network
             if current_ssid in self.staff_networks:
+                if user_id and self.presence_service:
+                    self.presence_service.capture_wifi_event(
+                        user_id,
+                        current_ssid,
+                        device_info or {},
+                        coords or {},
+                    )
                 return {
                     "access_granted": True,
                     "reason": "staff_network",
@@ -579,6 +654,13 @@ class WiFiVerification:
             
             # Check if specific network is required
             if required_network and current_ssid == required_network:
+                if user_id and self.presence_service:
+                    self.presence_service.capture_wifi_event(
+                        user_id,
+                        current_ssid,
+                        device_info or {},
+                        coords or {},
+                    )
                 return {
                     "access_granted": True,
                     "reason": "specific_network",
@@ -619,5 +701,7 @@ class WiFiVerification:
                 "available_mall_networks": []
             }
 
-# Global WiFi verification instance
-wifi_verification = WiFiVerification() 
+# Global WiFi verification instance hooked to presence tracking
+_db = MallDatabase()
+_presence_service = PresenceService(_db)
+wifi_verification = WiFiVerification(_presence_service)

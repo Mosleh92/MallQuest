@@ -4,11 +4,17 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import os
 from datetime import datetime, timedelta
 from collections import defaultdict
+from functools import wraps
 
- codex/add-crm-route-and-template
+ codex/add-authentication-to-/admin/crm-route
+# codex/add-crm-route-and-template
 from database import MallDatabase, User, Receipt
+# =======
+# from database import MallDatabase
+from app.services import segmentation_service
+# main
 =======
-from database import MallDatabase
+from database import MallDatabase, User, Receipt
 from app.services import segmentation_service
  main
 from i18n import translator, get_locale
@@ -80,8 +86,11 @@ def login():
     session['user_id'] = user_id
     return jsonify({'success': True, 'user_id': user_id})
 
+ codex/add-authentication-to-/admin/crm-route
 
- codex/add-post-endpoint-for-purchases
+# codex/add-post-endpoint-for-purchases
+=======
+ main
 @app.route('/api/pos/purchase', methods=['POST'])
 def pos_purchase():
     """Record POS purchase and forward to purchase logger."""
@@ -105,11 +114,30 @@ def pos_purchase():
         return jsonify({'error': 'Unable to record purchase'}), 400
 
     return jsonify({'success': True}), 201
+ codex/add-authentication-to-/admin/crm-route
+# =======
+# codex/add-crm-route-and-template
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 =======
- codex/add-crm-route-and-template
+ main
 @app.route('/admin/crm', methods=['GET', 'POST'])
+@login_required
 def admin_crm():
     """CRM dashboard providing user metrics and campaign tools."""
+    user_id = session.get('user_id')
+    user = mall_db.get_user(user_id)
+    if not user or user.get('role') != 'admin':
+        return jsonify({'error': 'Forbidden'}), 403
     if request.method == 'POST':
         data = request.get_json() or {}
         min_spend = float(data.get('spend') or 0)
@@ -210,8 +238,11 @@ def admin_crm():
         entry_data=entry_data,
         retention_data=retention_data,
     )
+ codex/add-authentication-to-/admin/crm-route
+# =======
+# codex/add-last_purchase_at-to-user-model
 =======
- codex/add-last_purchase_at-to-user-model
+ main
 @app.route('/admin/inactive-users')
 def inactive_users():
     """Return lists of dormant and lost users."""
@@ -231,7 +262,10 @@ def inactive_users():
             'lost': segmentation_service.get_users_by_segment('lost'),
         }
     )
+ codex/add-authentication-to-/admin/crm-route
+# =======
 =======
+ main
 @app.route('/api/purchases', methods=['GET'])
 def purchase_stats():
     """Return aggregated purchase statistics."""
@@ -240,8 +274,11 @@ def purchase_stats():
     range_param = request.args.get('range', 'daily')
     stats = mall_db.get_purchase_stats(range_param)
     return jsonify({'range': range_param, 'stats': stats})
- main
- main
+ codex/add-authentication-to-/admin/crm-route
+# main
+# main
+# main
+=======
  main
 
 
