@@ -33,6 +33,7 @@ class User(Base):
     date_of_birth = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_entry_at = Column(DateTime, nullable=True)
 
 
 class Receipt(Base):
@@ -48,6 +49,7 @@ class Receipt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+ codex/add-purchasehistory-model-and-api
 class PurchaseHistory(Base):
     __tablename__ = "purchase_history"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -57,6 +59,17 @@ class PurchaseHistory(Base):
     upload_type = Column(String, nullable=False)
     receipt_url = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
+=======
+class MallEntry(Base):
+    __tablename__ = "mall_entries"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    location = Column(String)
+    device_info = Column(JSON)
+    latitude = Column(Float)
+    longitude = Column(Float)
+ main
 
 
 class MallDatabase:
@@ -171,11 +184,36 @@ class MallDatabase:
         finally:
             session.close()
 
+ codex/add-purchasehistory-model-and-api
     def add_purchase_record(self, data: Dict[str, Any]) -> bool:
         session = self._session_for_key(data["user_id"])
         try:
             record = PurchaseHistory(**data)
             session.add(record)
+=======
+    def log_mall_entry(
+        self,
+        user_id: str,
+        location: str,
+        device_info: Dict[str, Any],
+        coords: Dict[str, float],
+    ) -> bool:
+        """Insert a mall entry and update the user's last entry timestamp."""
+
+        session = self._session_for_key(user_id)
+        try:
+            entry = MallEntry(
+                user_id=user_id,
+                location=location,
+                device_info=device_info,
+                latitude=coords.get("latitude"),
+                longitude=coords.get("longitude"),
+            )
+            session.add(entry)
+            user = session.get(User, user_id)
+            if user:
+                user.last_entry_at = entry.timestamp
+ main
             session.commit()
             return True
         except Exception:
@@ -184,6 +222,7 @@ class MallDatabase:
         finally:
             session.close()
 
+ codex/add-purchasehistory-model-and-api
     def get_purchase_stats(self, range: str) -> Dict[str, Dict[str, float]]:
         if range == "daily":
             start = datetime.utcnow() - timedelta(days=1)
@@ -215,6 +254,8 @@ class MallDatabase:
                 session.close()
         return stats
 
+=======
+ main
     def close(self) -> None:
         for engine in self.engines:
             engine.dispose()
