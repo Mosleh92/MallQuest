@@ -1,10 +1,16 @@
 """Minimal web interface with secure configuration checks."""
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, render_template
 from werkzeug.security import check_password_hash, generate_password_hash
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
 
+ codex/add-crm-route-and-template
+from database import MallDatabase, User, Receipt
+=======
 from database import MallDatabase
+from app.services import segmentation_service
+ main
 from i18n import translator, get_locale
 from mallquest_wager.wager_routes import wager_bp
 from mall_gamification_system import MallGamificationSystem
@@ -27,6 +33,7 @@ if JWTManager:
     jwt = JWTManager(app)
 
 mall_db = MallDatabase()
+segmentation_service.schedule_daily_update(mall_db)
 app.register_blueprint(wager_bp, url_prefix='/wager')
 mall_system = MallGamificationSystem()
 
@@ -74,6 +81,7 @@ def login():
     return jsonify({'success': True, 'user_id': user_id})
 
 
+ codex/add-post-endpoint-for-purchases
 @app.route('/api/pos/purchase', methods=['POST'])
 def pos_purchase():
     """Record POS purchase and forward to purchase logger."""
@@ -97,6 +105,144 @@ def pos_purchase():
         return jsonify({'error': 'Unable to record purchase'}), 400
 
     return jsonify({'success': True}), 201
+=======
+ codex/add-crm-route-and-template
+@app.route('/admin/crm', methods=['GET', 'POST'])
+def admin_crm():
+    """CRM dashboard providing user metrics and campaign tools."""
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        min_spend = float(data.get('spend') or 0)
+        brand = data.get('brand') or ''
+        inactivity = int(data.get('inactivity') or 0)
+        min_age = int(data.get('age') or 0)
+        message = data.get('message') or ''
+
+        sent = 0
+        now = datetime.utcnow()
+        for maker in mall_db.sessions:
+            session_db = maker()
+            try:
+                users = session_db.query(User).all()
+                for user in users:
+                    if min_spend and (user.total_spent or 0) < min_spend:
+                        continue
+                    receipts = session_db.query(Receipt).filter_by(user_id=user.user_id).all()
+                    if brand and not any(r.store == brand for r in receipts):
+                        continue
+                    if inactivity:
+                        last_receipt = max((r.created_at for r in receipts), default=None)
+                        if not last_receipt or (now - last_receipt).days < inactivity:
+                            continue
+                    if min_age and user.date_of_birth:
+                        age = now.year - user.date_of_birth.year - (
+                            (now.month, now.day) < (user.date_of_birth.month, user.date_of_birth.day)
+                        )
+                        if age < min_age:
+                            continue
+                    # Placeholder for mass notification
+                    print(f"Campaign to {user.user_id}: {message}")
+                    sent += 1
+            finally:
+                session_db.close()
+
+        return jsonify({'status': 'sent', 'count': sent})
+
+    now = datetime.utcnow()
+    seven_days_ago = now - timedelta(days=7)
+    thirty_days_ago = now - timedelta(days=30)
+
+    active_users = set()
+    inactive_users = set()
+    top_store_sales = defaultdict(float)
+    visit_diffs = []
+    entry_counts = defaultdict(int)
+    retention_counts = defaultdict(set)
+
+    for maker in mall_db.sessions:
+        session_db = maker()
+        try:
+            receipts_30 = session_db.query(Receipt).filter(Receipt.created_at >= thirty_days_ago).all()
+            for r in receipts_30:
+                if r.created_at >= seven_days_ago:
+                    active_users.add(r.user_id)
+                top_store_sales[r.store] += r.amount or 0
+                day = r.created_at.date()
+                entry_counts[day] += 1
+                retention_counts[day].add(r.user_id)
+
+            users = session_db.query(User).all()
+            for u in users:
+                last_receipt = session_db.query(Receipt).filter_by(user_id=u.user_id).order_by(Receipt.created_at.desc()).first()
+                if not last_receipt or last_receipt.created_at < thirty_days_ago:
+                    inactive_users.add(u.user_id)
+
+            user_receipts = session_db.query(Receipt).order_by(Receipt.user_id, Receipt.created_at).all()
+            last_dates = {}
+            for rec in user_receipts:
+                if rec.user_id in last_dates:
+                    diff = (rec.created_at - last_dates[rec.user_id]).days
+                    if diff > 0:
+                        visit_diffs.append(diff)
+                last_dates[rec.user_id] = rec.created_at
+        finally:
+            session_db.close()
+
+    avg_visit_interval = sum(visit_diffs) / len(visit_diffs) if visit_diffs else 0
+    top_store_sales = dict(sorted(top_store_sales.items(), key=lambda x: x[1], reverse=True)[:5])
+
+    labels = []
+    entry_data = []
+    retention_data = []
+    for i in range(30):
+        day = (now - timedelta(days=29 - i)).date()
+        labels.append(day.strftime('%m-%d'))
+        entry_data.append(entry_counts.get(day, 0))
+        retention_data.append(len(retention_counts.get(day, set())))
+
+    return render_template(
+        'admin_crm.html',
+        active_users=len(active_users),
+        inactive_users=len(inactive_users),
+        average_visit_interval=round(avg_visit_interval, 2),
+        top_store_sales=top_store_sales,
+        chart_labels=labels,
+        entry_data=entry_data,
+        retention_data=retention_data,
+    )
+=======
+ codex/add-last_purchase_at-to-user-model
+@app.route('/admin/inactive-users')
+def inactive_users():
+    """Return lists of dormant and lost users."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = mall_db.get_user(user_id)
+    if not user or user.get('role') != 'admin':
+        return jsonify({'error': 'Forbidden'}), 403
+    segment = request.args.get('segment')
+    if segment:
+        users = segmentation_service.get_users_by_segment(segment)
+        return jsonify({segment: users})
+    return jsonify(
+        {
+            'dormant': segmentation_service.get_users_by_segment('dormant'),
+            'lost': segmentation_service.get_users_by_segment('lost'),
+        }
+    )
+=======
+@app.route('/api/purchases', methods=['GET'])
+def purchase_stats():
+    """Return aggregated purchase statistics."""
+    if 'user_id' not in session:
+        return jsonify({'error': 'authentication required'}), 401
+    range_param = request.args.get('range', 'daily')
+    stats = mall_db.get_purchase_stats(range_param)
+    return jsonify({'range': range_param, 'stats': stats})
+ main
+ main
+ main
 
 
 if __name__ == '__main__':

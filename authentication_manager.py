@@ -22,6 +22,7 @@ class UserRole(Enum):
     """User roles enumeration"""
     PLAYER = "player"
     ADMIN = "admin"
+    SUPER_ADMIN = "super_admin"
     SHOPKEEPER = "shopkeeper"
     CUSTOMER_SERVICE = "customer_service"
     SYSTEM = "system"
@@ -448,6 +449,10 @@ def require_any_role(*roles: str):
 def require_admin():
     """Decorator for requiring admin role"""
     return require_auth(role=UserRole.ADMIN.value)
+
+def require_super_admin():
+    """Decorator for requiring super admin role"""
+    return require_auth(role=UserRole.SUPER_ADMIN.value)
 
 def require_player():
     """Decorator for requiring player role"""

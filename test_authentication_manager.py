@@ -8,18 +8,21 @@ import time
 import json
 from datetime import datetime, timedelta
 from authentication_manager import (
-    AuthenticationManager, 
-    UserRole, 
-    AuthenticationError, 
-    AuthorizationError, 
+    AuthenticationManager,
+    UserRole,
+    AuthenticationError,
+    AuthorizationError,
     RateLimitError,
     auth_manager,
     login_user,
     logout_user,
     refresh_user_token,
     get_security_report,
-    cleanup_security_data
+    cleanup_security_data,
+    require_super_admin
 )
+
+import authentication_manager
 
 def test_token_generation():
     """Test JWT token generation"""
@@ -339,6 +342,45 @@ def test_login_logout_flow():
     except Exception as e:
         print(f"❌ Login/logout flow failed: {e}")
         return False
+
+
+def test_super_admin_role():
+    """Test super admin role enforcement"""
+    print("\n🧪 Testing Super Admin Role")
+    print("=" * 40)
+
+    try:
+        token = auth_manager.generate_token("super1", UserRole.SUPER_ADMIN.value)
+
+        def secured_action():
+            return "access_granted"
+
+        original_extract = authentication_manager._extract_token_from_request
+        authentication_manager._extract_token_from_request = lambda: token
+        authentication_manager._set_request_user = lambda user: None
+
+        protected = require_super_admin()(secured_action)
+        assert protected() == "access_granted"
+        print("✅ Super admin access granted")
+
+        admin_token = auth_manager.generate_token("admin1", UserRole.ADMIN.value)
+        authentication_manager._extract_token_from_request = lambda: admin_token
+
+        try:
+            protected()
+            print("❌ Admin should not access super admin endpoint")
+            authentication_manager._extract_token_from_request = original_extract
+            return False
+        except AuthorizationError:
+            print("✅ Non-super admin access correctly denied")
+
+        authentication_manager._extract_token_from_request = original_extract
+        return True
+
+    except Exception as e:
+        print(f"❌ Super admin role test failed: {e}")
+        return False
+
 
 def test_error_handling():
     """Test error handling and edge cases"""
