@@ -4,6 +4,21 @@ from __future__ import annotations
 
 import os
 import hashlib
+ codex/add-firebase-notification-service-and-logging
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional, List
+
+from sqlalchemy import (
+    create_engine,
+    Column,
+    String,
+    Integer,
+    Float,
+    JSON,
+    DateTime,
+    Boolean,
+)
+=======
  codex/add-last_purchase_at-to-user-model
 import uuid
 from datetime import datetime
@@ -13,6 +28,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, List
 
 from sqlalchemy import create_engine, Column, String, Integer, Float, JSON, DateTime, func
+ main
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import make_url
@@ -55,6 +71,15 @@ class Receipt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+ codex/add-firebase-notification-service-and-logging
+class NotificationLog(Base):
+    __tablename__ = "notification_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+    delivered = Column(Boolean, default=False)
+=======
  codex/add-purchasehistory-model-and-api
 class PurchaseHistory(Base):
     __tablename__ = "purchase_history"
@@ -75,6 +100,7 @@ class MallEntry(Base):
     device_info = Column(JSON)
     latitude = Column(Float)
     longitude = Column(Float)
+ main
  main
 
 
@@ -226,6 +252,33 @@ class MallDatabase:
         finally:
             session.close()
 
+ codex/add-firebase-notification-service-and-logging
+    def log_notification(self, user_id: str, message: str, delivered: bool) -> None:
+        """Record notification delivery attempts."""
+        session = self._session_for_key(user_id)
+        try:
+            log = NotificationLog(user_id=user_id, message=message, delivered=delivered)
+            session.add(log)
+            session.commit()
+        except Exception:
+            session.rollback()
+        finally:
+            session.close()
+
+    def get_dormant_users(self, days: int = 30) -> List[Dict[str, Any]]:
+        """Return users who haven't been updated within the given number of days."""
+        threshold = datetime.utcnow() - timedelta(days=days)
+        result: List[Dict[str, Any]] = []
+        for session_factory in self.sessions:
+            session = session_factory()
+            try:
+                rows = session.query(User).filter(User.updated_at < threshold).all()
+                result.extend({c.name: getattr(row, c.name) for c in row.__table__.columns} for row in rows)
+            finally:
+                session.close()
+        return result
+
+=======
  codex/add-purchasehistory-model-and-api
     def add_purchase_record(self, data: Dict[str, Any]) -> bool:
         session = self._session_for_key(data["user_id"])
@@ -297,6 +350,7 @@ class MallDatabase:
         return stats
 
 =======
+ main
  main
     def close(self) -> None:
         for engine in self.engines:
