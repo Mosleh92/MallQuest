@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import hashlib
+ codex/add-firebase-notification-service-and-logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, List
 
@@ -17,6 +18,17 @@ from sqlalchemy import (
     DateTime,
     Boolean,
 )
+=======
+ codex/add-last_purchase_at-to-user-model
+import uuid
+from datetime import datetime
+=======
+from datetime import datetime, timedelta
+ main
+from typing import Any, Dict, Optional, List
+
+from sqlalchemy import create_engine, Column, String, Integer, Float, JSON, DateTime, func
+ main
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import make_url
@@ -38,10 +50,12 @@ class User(Base):
     vip_tier = Column(String, default="Bronze")
     vip_points = Column(Integer, default=0)
     total_spent = Column(Float, default=0.0)
+    last_purchase_at = Column(DateTime, nullable=True)
     language = Column(String, default="en")
     date_of_birth = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_entry_at = Column(DateTime, nullable=True)
 
 
 class Receipt(Base):
@@ -57,6 +71,7 @@ class Receipt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+ codex/add-firebase-notification-service-and-logging
 class NotificationLog(Base):
     __tablename__ = "notification_logs"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -64,6 +79,29 @@ class NotificationLog(Base):
     message = Column(String, nullable=False)
     sent_at = Column(DateTime, default=datetime.utcnow)
     delivered = Column(Boolean, default=False)
+=======
+ codex/add-purchasehistory-model-and-api
+class PurchaseHistory(Base):
+    __tablename__ = "purchase_history"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    store_id = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    upload_type = Column(String, nullable=False)
+    receipt_url = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+=======
+class MallEntry(Base):
+    __tablename__ = "mall_entries"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    location = Column(String)
+    device_info = Column(JSON)
+    latitude = Column(Float)
+    longitude = Column(Float)
+ main
+ main
 
 
 class MallDatabase:
@@ -170,6 +208,42 @@ class MallDatabase:
         finally:
             session.close()
 
+    def add_purchase_record(
+        self,
+        user_id: str,
+        amount: float,
+        store: str,
+        category: Optional[str] = None,
+        currency: str = "AED",
+        items: Optional[Any] = None,
+    ) -> bool:
+        """Add a purchase record and update user's last purchase timestamp."""
+        session = self._session_for_key(user_id)
+        try:
+            receipt = Receipt(
+                receipt_id=str(uuid.uuid4()),
+                user_id=user_id,
+                store=store,
+                category=category,
+                amount=amount,
+                currency=currency,
+                status="completed",
+                items=items,
+                created_at=datetime.utcnow(),
+            )
+            session.add(receipt)
+            user = session.get(User, user_id)
+            if user:
+                user.last_purchase_at = datetime.utcnow()
+                user.total_spent = (user.total_spent or 0.0) + amount
+            session.commit()
+            return True
+        except Exception:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
     def get_user_receipts(self, user_id: str) -> List[Dict[str, Any]]:
         session = self._session_for_key(user_id)
         try:
@@ -178,6 +252,7 @@ class MallDatabase:
         finally:
             session.close()
 
+ codex/add-firebase-notification-service-and-logging
     def log_notification(self, user_id: str, message: str, delivered: bool) -> None:
         """Record notification delivery attempts."""
         session = self._session_for_key(user_id)
@@ -203,6 +278,80 @@ class MallDatabase:
                 session.close()
         return result
 
+=======
+ codex/add-purchasehistory-model-and-api
+    def add_purchase_record(self, data: Dict[str, Any]) -> bool:
+        session = self._session_for_key(data["user_id"])
+        try:
+            record = PurchaseHistory(**data)
+            session.add(record)
+=======
+    def log_mall_entry(
+        self,
+        user_id: str,
+        location: str,
+        device_info: Dict[str, Any],
+        coords: Dict[str, float],
+    ) -> bool:
+        """Insert a mall entry and update the user's last entry timestamp."""
+
+        session = self._session_for_key(user_id)
+        try:
+            entry = MallEntry(
+                user_id=user_id,
+                location=location,
+                device_info=device_info,
+                latitude=coords.get("latitude"),
+                longitude=coords.get("longitude"),
+            )
+            session.add(entry)
+            user = session.get(User, user_id)
+            if user:
+                user.last_entry_at = entry.timestamp
+ main
+            session.commit()
+            return True
+        except Exception:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+ codex/add-purchasehistory-model-and-api
+    def get_purchase_stats(self, range: str) -> Dict[str, Dict[str, float]]:
+        if range == "daily":
+            start = datetime.utcnow() - timedelta(days=1)
+        elif range == "weekly":
+            start = datetime.utcnow() - timedelta(weeks=1)
+        elif range == "monthly":
+            start = datetime.utcnow() - timedelta(days=30)
+        else:
+            start = None
+
+        stats: Dict[str, Dict[str, float]] = {}
+        for maker in self.sessions:
+            session = maker()
+            try:
+                query = session.query(
+                    PurchaseHistory.store_id,
+                    func.count().label("count"),
+                    func.sum(PurchaseHistory.amount).label("total"),
+                )
+                if start:
+                    query = query.filter(PurchaseHistory.timestamp >= start)
+                query = query.group_by(PurchaseHistory.store_id)
+                for store_id, count, total in query.all():
+                    if store_id not in stats:
+                        stats[store_id] = {"count": 0, "total": 0.0}
+                    stats[store_id]["count"] += count
+                    stats[store_id]["total"] += float(total or 0.0)
+            finally:
+                session.close()
+        return stats
+
+=======
+ main
+ main
     def close(self) -> None:
         for engine in self.engines:
             engine.dispose()
