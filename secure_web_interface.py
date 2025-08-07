@@ -13,11 +13,13 @@ from security_module import (
     get_secure_database, get_rate_limiter
 )
 from database import MallDatabase
+from config import current_config
 import json
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'deerfields_mall_secure_secret_key_2024'
+# Load secret key from configuration for improved security
+app.config['SECRET_KEY'] = current_config.SECRET_KEY
 
 # Initialize the mall system and security components
 mall_system = MallGamificationSystem()
