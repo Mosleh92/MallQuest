@@ -1,43 +1,44 @@
 #!/usr/bin/env python3
-"""Database layer using SQLAlchemy with PostgreSQL DSN and sharding support."""
+"""Database layer using SQLAlchemy with sharding support.
+
+This module replaces the broken merge state with a clean implementation that
+includes basic user and receipt management along with notification logging and
+mall entry tracking. It uses SQLAlchemy and a simple hash based sharding
+strategy.
+"""
+
 from __future__ import annotations
 
-import os
 import hashlib
- codex/add-firebase-notification-service-and-logging
+import os
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import (
-    create_engine,
-    Column,
-    String,
-    Integer,
-    Float,
     JSON,
-    DateTime,
     Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    create_engine,
+    func,
 )
-=======
- codex/add-last_purchase_at-to-user-model
-import uuid
-from datetime import datetime
-=======
-from datetime import datetime, timedelta
- main
-from typing import Any, Dict, Optional, List
-
-from sqlalchemy import create_engine, Column, String, Integer, Float, JSON, DateTime, func
- main
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
+from logger import get_logger
+
 
 Base = declarative_base()
+log = get_logger(__name__)
 
 
 class User(Base):
     __tablename__ = "users"
+
     user_id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True)
@@ -60,6 +61,7 @@ class User(Base):
 
 class Receipt(Base):
     __tablename__ = "receipts"
+
     receipt_id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False)
     store = Column(String, nullable=False)
@@ -71,28 +73,19 @@ class Receipt(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
- codex/add-firebase-notification-service-and-logging
 class NotificationLog(Base):
     __tablename__ = "notification_logs"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, nullable=False)
     message = Column(String, nullable=False)
     sent_at = Column(DateTime, default=datetime.utcnow)
     delivered = Column(Boolean, default=False)
-=======
- codex/add-purchasehistory-model-and-api
-class PurchaseHistory(Base):
-    __tablename__ = "purchase_history"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String, nullable=False)
-    store_id = Column(String, nullable=False)
-    amount = Column(Float, nullable=False)
-    upload_type = Column(String, nullable=False)
-    receipt_url = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-=======
+
+
 class MallEntry(Base):
     __tablename__ = "mall_entries"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
@@ -100,30 +93,21 @@ class MallEntry(Base):
     device_info = Column(JSON)
     latitude = Column(Float)
     longitude = Column(Float)
- main
- main
 
 
 class MallDatabase:
     """Database manager using SQLAlchemy with shard routing."""
 
-    def __init__(self, dsn: Optional[str] = None, shard_count: Optional[int] = None, shard_strategy: Optional[str] = None):
-        """Initialize the database layer.
-
-        Parameters
-        ----------
-        dsn: str, optional
-            Base SQLAlchemy DSN. If omitted, uses ``DATABASE_URL`` env var and
-            falls back to SQLite.
-        shard_count: int, optional
-            Number of database shards. Defaults to ``SHARD_COUNT`` env var or 1.
-        shard_strategy: str, optional
-            Strategy name used for shard mapping. Currently only ``"hash"`` is
-            supported. Defaults to ``SHARD_STRATEGY`` env var or ``"hash"``.
-        """
+    def __init__(
+        self,
+        dsn: Optional[str] = None,
+        shard_count: Optional[int] = None,
+        shard_strategy: Optional[str] = None,
+    ) -> None:
         self.dsn = dsn or os.getenv("DATABASE_URL", "sqlite:///mall_gamification.db")
         self.shard_count = shard_count or int(os.getenv("SHARD_COUNT", "1"))
         self.shard_strategy = shard_strategy or os.getenv("SHARD_STRATEGY", "hash")
+
         self.engines: List[Engine] = []
         self.sessions: List[sessionmaker] = []
 
@@ -134,9 +118,11 @@ class MallDatabase:
             self.sessions.append(sessionmaker(bind=engine))
             Base.metadata.create_all(engine)
 
-        # provide connection to first shard for backward compatibility
+        # Compatibility: expose first engine connection as ``conn``
         self.conn = self.engines[0].connect()
 
+    # ------------------------------------------------------------------
+    # Internal helpers
     def _dsn_for_shard(self, shard_id: int) -> str:
         url = make_url(self.dsn)
         if url.database:
@@ -144,7 +130,6 @@ class MallDatabase:
         return str(url)
 
     def _shard_for_key(self, key: str) -> int:
-        """Return shard index for the given key based on configured strategy."""
         if self.shard_strategy == "hash":
             digest = hashlib.sha256(key.encode()).hexdigest()
             return int(digest, 16) % self.shard_count
@@ -154,6 +139,7 @@ class MallDatabase:
         index = self._shard_for_key(key)
         return self.sessions[index]()
 
+    # ------------------------------------------------------------------
     # CRUD helpers
     def add_user(self, data: Dict[str, Any]) -> bool:
         session = self._session_for_key(data["user_id"])
@@ -162,8 +148,9 @@ class MallDatabase:
             session.add(user)
             session.commit()
             return True
-        except Exception:
+        except Exception:  # pragma: no cover - log unexpected errors
             session.rollback()
+            log.exception("failed to add user %s", data.get("user_id"))
             return False
         finally:
             session.close()
@@ -189,8 +176,9 @@ class MallDatabase:
                     setattr(user, key, value)
             session.commit()
             return True
-        except Exception:
+        except Exception:  # pragma: no cover
             session.rollback()
+            log.exception("failed to update user %s", user_id)
             return False
         finally:
             session.close()
@@ -200,46 +188,15 @@ class MallDatabase:
         try:
             receipt = Receipt(**data)
             session.add(receipt)
-            session.commit()
-            return True
-        except Exception:
-            session.rollback()
-            return False
-        finally:
-            session.close()
-
-    def add_purchase_record(
-        self,
-        user_id: str,
-        amount: float,
-        store: str,
-        category: Optional[str] = None,
-        currency: str = "AED",
-        items: Optional[Any] = None,
-    ) -> bool:
-        """Add a purchase record and update user's last purchase timestamp."""
-        session = self._session_for_key(user_id)
-        try:
-            receipt = Receipt(
-                receipt_id=str(uuid.uuid4()),
-                user_id=user_id,
-                store=store,
-                category=category,
-                amount=amount,
-                currency=currency,
-                status="completed",
-                items=items,
-                created_at=datetime.utcnow(),
-            )
-            session.add(receipt)
-            user = session.get(User, user_id)
+            user = session.get(User, data["user_id"])
             if user:
                 user.last_purchase_at = datetime.utcnow()
-                user.total_spent = (user.total_spent or 0.0) + amount
+                user.total_spent = (user.total_spent or 0.0) + data.get("amount", 0.0)
             session.commit()
             return True
-        except Exception:
+        except Exception:  # pragma: no cover
             session.rollback()
+            log.exception("failed to add receipt for user %s", data.get("user_id"))
             return False
         finally:
             session.close()
@@ -252,25 +209,25 @@ class MallDatabase:
         finally:
             session.close()
 
- codex/add-firebase-notification-service-and-logging
+    # ------------------------------------------------------------------
+    # Additional helpers
     def log_notification(self, user_id: str, message: str, delivered: bool) -> None:
-        """Record notification delivery attempts."""
         session = self._session_for_key(user_id)
         try:
-            log = NotificationLog(user_id=user_id, message=message, delivered=delivered)
-            session.add(log)
+            log_entry = NotificationLog(user_id=user_id, message=message, delivered=delivered)
+            session.add(log_entry)
             session.commit()
-        except Exception:
+        except Exception:  # pragma: no cover
             session.rollback()
+            log.exception("failed to log notification for user %s", user_id)
         finally:
             session.close()
 
     def get_dormant_users(self, days: int = 30) -> List[Dict[str, Any]]:
-        """Return users who haven't been updated within the given number of days."""
         threshold = datetime.utcnow() - timedelta(days=days)
         result: List[Dict[str, Any]] = []
-        for session_factory in self.sessions:
-            session = session_factory()
+        for factory in self.sessions:
+            session = factory()
             try:
                 rows = session.query(User).filter(User.updated_at < threshold).all()
                 result.extend({c.name: getattr(row, c.name) for c in row.__table__.columns} for row in rows)
@@ -278,14 +235,6 @@ class MallDatabase:
                 session.close()
         return result
 
-=======
- codex/add-purchasehistory-model-and-api
-    def add_purchase_record(self, data: Dict[str, Any]) -> bool:
-        session = self._session_for_key(data["user_id"])
-        try:
-            record = PurchaseHistory(**data)
-            session.add(record)
-=======
     def log_mall_entry(
         self,
         user_id: str,
@@ -293,8 +242,6 @@ class MallDatabase:
         device_info: Dict[str, Any],
         coords: Dict[str, float],
     ) -> bool:
-        """Insert a mall entry and update the user's last entry timestamp."""
-
         session = self._session_for_key(user_id)
         try:
             entry = MallEntry(
@@ -308,50 +255,16 @@ class MallDatabase:
             user = session.get(User, user_id)
             if user:
                 user.last_entry_at = entry.timestamp
- main
             session.commit()
             return True
-        except Exception:
+        except Exception:  # pragma: no cover
             session.rollback()
+            log.exception("failed to log mall entry for user %s", user_id)
             return False
         finally:
             session.close()
 
- codex/add-purchasehistory-model-and-api
-    def get_purchase_stats(self, range: str) -> Dict[str, Dict[str, float]]:
-        if range == "daily":
-            start = datetime.utcnow() - timedelta(days=1)
-        elif range == "weekly":
-            start = datetime.utcnow() - timedelta(weeks=1)
-        elif range == "monthly":
-            start = datetime.utcnow() - timedelta(days=30)
-        else:
-            start = None
-
-        stats: Dict[str, Dict[str, float]] = {}
-        for maker in self.sessions:
-            session = maker()
-            try:
-                query = session.query(
-                    PurchaseHistory.store_id,
-                    func.count().label("count"),
-                    func.sum(PurchaseHistory.amount).label("total"),
-                )
-                if start:
-                    query = query.filter(PurchaseHistory.timestamp >= start)
-                query = query.group_by(PurchaseHistory.store_id)
-                for store_id, count, total in query.all():
-                    if store_id not in stats:
-                        stats[store_id] = {"count": 0, "total": 0.0}
-                    stats[store_id]["count"] += count
-                    stats[store_id]["total"] += float(total or 0.0)
-            finally:
-                session.close()
-        return stats
-
-=======
- main
- main
     def close(self) -> None:
         for engine in self.engines:
             engine.dispose()
+
