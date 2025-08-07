@@ -409,6 +409,20 @@ assert report['average_response_time'] > 0
    cache_ttl = 60  # 1 minute instead of 5 minutes
    ```
 
+## Network Performance Considerations
+
+### Server Tick Rate
+- Real-time interactions generally use tick rates between 30–60 Hz. Higher rates improve responsiveness but increase CPU and bandwidth demands. Choose a rate that balances smooth play with server capacity.
+
+### Acceptable Latency Thresholds
+- Aim for latency below 50 ms for seamless play; below 100 ms remains responsive, while above 150 ms may feel laggy. Monitor and alert when thresholds are exceeded.
+
+### Synchronization Methods (Client Prediction)
+- Implement client-side prediction so players experience immediate feedback while awaiting server validation. Use server reconciliation to correct divergence and maintain authoritative state.
+
+### Fallback Strategies for Packet Loss
+- Buffer and retransmit critical updates, use interpolation or extrapolation to smooth gaps, and reduce update frequency or switch to more reliable protocols when loss persists.
+
 ## Dependencies
 
 The performance improvements require these additional dependencies:

@@ -49,5 +49,6 @@
   "access_denied": "Access denied",
   "resource_not_found": "Resource not found",
   "internal_error": "An internal error occurred",
-  "logged_out": "Logged out"
+  "logged_out": "Logged out",
+  "age_restricted": "User must be 17 or older"
 }

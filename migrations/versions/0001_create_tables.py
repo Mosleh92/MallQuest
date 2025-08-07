@@ -29,6 +29,7 @@ def upgrade():
         sa.Column('vip_points', sa.Integer(), default=0),
         sa.Column('total_spent', sa.Float(), default=0.0),
         sa.Column('language', sa.String(), default='en'),
+        sa.Column('date_of_birth', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
     )

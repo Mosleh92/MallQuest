@@ -1792,34 +1792,9 @@ class GraphicsEngine:
         return {"status": "success", "path": path_config}
     
     def add_game_zone(self, name: str, activities: List[str], age_limit: int = 12):
-        """Add kids play zone with age-appropriate activities"""
-        zone_config = {
-            "name": name,
-            "activities": activities,
-            "age_limit": age_limit,
-            "position": {"x": 200, "y": 0, "z": 0},
-            "appearance": {
-                "theme": "colorful_playground",
-                "safety_features": True,
-                "bright_colors": True,
-                "fun_lighting": True
-            },
-            "games": {
-                "coin_hunt": {"difficulty": "easy", "reward": 10},
-                "slide_game": {"difficulty": "easy", "reward": 15},
-                "color_match": {"difficulty": "medium", "reward": 20}
-            },
-            "safety": {
-                "age_verification": True,
-                "parental_controls": True,
-                "safe_environment": True
-            },
-            "created_at": datetime.now()
-        }
-        
-        self.kid_zone_system[name] = zone_config
-        logger.info(f"[3D GRAPHICS] Kids zone added: {name} with {activities}")
-        return {"status": "success", "zone": zone_config}
+        """Disabled in adult version of the game."""
+        logger.info("[3D GRAPHICS] Kids zone feature disabled")
+        return {"status": "error", "message": "kids zone disabled"}
     
     def track_user_location(self, live: bool = True, trigger_events_nearby: bool = True):
         """Track user location and trigger nearby events"""

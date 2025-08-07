@@ -1,7 +1,8 @@
 """Minimal web interface with secure configuration checks."""
 from flask import Flask, request, jsonify, session
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 import os
+from datetime import datetime
 
 from database import MallDatabase
 from i18n import translator, get_locale
@@ -27,6 +28,16 @@ if JWTManager:
 mall_db = MallDatabase()
 app.register_blueprint(wager_bp, url_prefix='/wager')
 
+# Seed demo user for testing and development
+if not mall_db.get_user('demo'):
+    mall_db.add_user({
+        'user_id': 'demo',
+        'name': 'Demo User',
+        'email': 'demo@example.com',
+        'password_hash': generate_password_hash('demo123'),
+        'date_of_birth': datetime(2000, 1, 1)
+    })
+
 @app.route('/login', methods=['POST'])
 def login():
     """Authenticate user using hashed password stored in the database."""
@@ -45,6 +56,17 @@ def login():
         or not check_password_hash(user_record['password_hash'], password)
     ):
         return jsonify({'error': translator.gettext('invalid_credentials', lang)}), 401
+
+    dob = user_record.get('date_of_birth')
+    if dob:
+        if isinstance(dob, str):
+            dob_dt = datetime.fromisoformat(dob)
+        else:
+            dob_dt = dob
+        today = datetime.utcnow().date()
+        age = today.year - dob_dt.year - ((today.month, today.day) < (dob_dt.month, dob_dt.day))
+        if age < 17:
+            return jsonify({'error': translator.gettext('age_restricted', lang)}), 403
 
     session['user_id'] = user_id
     return jsonify({'success': True, 'user_id': user_id})

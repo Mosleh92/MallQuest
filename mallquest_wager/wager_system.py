@@ -1,3 +1,13 @@
+"""Core game logic for MallQuest wager matches.
+
+Players stake coins to join a match. Eliminating an opponent immediately
+transfers their stake to the killer as a **kill reward**. When the match
+concludes, any remaining **pot** of staked coins is split evenly among all
+surviving members of the winning squad. If players from multiple squads
+survive, the pot is divided equally across all survivors to resolve the tie.
+Assists are not tracked – only the credited killer receives a kill reward.
+"""
+
 from __future__ import annotations
 
 import uuid
@@ -63,16 +73,25 @@ def generate_safe_zone_timeline(player_count: int) -> List[SafeZoneStage]:
 class WagerMatch:
     """Simple in-memory representation of a wager match.
 
+ codex/add-detailed-safe-zone-timeline
     Attributes
     ----------
     safe_zone_timeline:
         List of stages showing how the safe zone shrinks. Large matches generate
         more stages with bigger starting radii and higher damage per tick.
+=======
+    The match tracks fairness related parameters including a maximum pot size
+    and the maximum fraction a single player may contribute.  These values are
+    used by :func:`join_match` when calculating the dynamic stake for a new
+    player.
+ main
     """
 
     match_id: str
     name: str
     stake_each: int
+    max_pot: int = 1000
+    max_player_fraction: float = 0.1  # anti-whale: max 10% of pot per player
     pot: int = 0
     members: Dict[str, str] = field(default_factory=dict)  # user_id -> squad_id
     eliminated: Set[str] = field(default_factory=set)
@@ -84,17 +103,38 @@ class WagerMatch:
 _MATCHES: Dict[str, WagerMatch] = {}
 
 
+ codex/add-detailed-safe-zone-timeline
 def create_match(name: str, stake_each: int, expected_players: int = 0) -> WagerMatch:
     """Create a new :class:`WagerMatch` and register it.
 
     ``expected_players`` determines safe-zone scaling: small (<=20) vs. large
     matches (>20).
+=======
+def create_match(name: str, stake_each: int, max_pot: int = 1000, max_player_fraction: float = 0.1) -> WagerMatch:
+    """Create and register a new :class:`WagerMatch`.
+
+    Parameters
+    ----------
+    name:
+        Friendly name of the match.
+    stake_each:
+        Base stake required from each participant before adjustments.
+    max_pot:
+        Maximum total pot size allowed for this match.
+    max_player_fraction:
+        Maximum fraction of the pot a single player may contribute.
+ main
     """
     match = WagerMatch(
         match_id=uuid.uuid4().hex,
         name=name,
         stake_each=stake_each,
+ codex/add-detailed-safe-zone-timeline
         safe_zone_timeline=generate_safe_zone_timeline(expected_players),
+=======
+        max_pot=max_pot,
+        max_player_fraction=max_player_fraction,
+ main
     )
     _MATCHES[match.match_id] = match
     return match
@@ -103,23 +143,45 @@ def create_match(name: str, stake_each: int, expected_players: int = 0) -> Wager
 def join_match(user_id: str, match_id: str, squad_id: str) -> bool:
     """Join an existing match by staking coins.
 
-    Coins are deducted from the user's balance using a database transaction. The
-    deducted amount is added to the match's pot.
+    Coins are deducted from the user's balance using a database transaction and
+    added to the match's pot.  The amount deducted is **dynamically adjusted**
+    according to two rules:
+
+    1. ``match.max_pot`` caps the total size of the pot.
+    2. ``match.max_player_fraction`` ensures a single player cannot contribute
+       more than a fraction of the maximum pot (anti-whale mechanism).
+
+    The actual stake used is the minimum of the base ``stake_each``, the
+    remaining room before reaching ``max_pot`` and the player's allowed share of
+    the pot.
     """
     match = _MATCHES.get(match_id)
-    if not match or not match.active:
+    if not match or not match.active or match.pot >= match.max_pot:
         return False
 
     session = _db._session_for_key(user_id)
     try:
         user = session.get(User, user_id)
-        if not user or user.coins < match.stake_each:
+        if not user:
             session.rollback()
             return False
-        user.coins -= match.stake_each
+
+        # calculate dynamic stake
+        stake = min(
+            match.stake_each,
+            int(user.coins * match.max_player_fraction),
+            int(match.max_pot * match.max_player_fraction),
+            match.max_pot - match.pot,
+        )
+
+        if stake <= 0 or user.coins < stake:
+            session.rollback()
+            return False
+
+        user.coins -= stake
         session.commit()
         match.members[user_id] = squad_id
-        match.pot += match.stake_each
+        match.pot += stake
         return True
     except Exception:
         session.rollback()
@@ -129,7 +191,12 @@ def join_match(user_id: str, match_id: str, squad_id: str) -> bool:
 
 
 def record_kill(winner_id: str, loser_id: str, match_id: str) -> bool:
-    """Record a kill and transfer coins from loser to winner."""
+    """Record a kill and transfer coins from loser to winner.
+
+    The killer receives the loser's staked amount as an immediate reward. The
+    transfer does not affect the match pot. Assists are ignored – only the
+    player credited with the kill is rewarded.
+    """
     match = _MATCHES.get(match_id)
     if not match or not match.active:
         return False
@@ -168,7 +235,13 @@ def record_kill(winner_id: str, loser_id: str, match_id: str) -> bool:
 
 
 def finish_match(match_id: str) -> Dict[str, int]:
-    """Finish a match and distribute the remaining pot among survivors."""
+    """Finish a match and distribute the remaining pot among survivors.
+
+    Each surviving teammate on the winning squad receives an equal share of
+    the pot. If members of multiple squads remain, the match ends in a tie and
+    the pot is split evenly among all surviving players. Eliminated players and
+    assists do not receive any portion of the pot.
+    """
     match = _MATCHES.get(match_id)
     if not match or not match.active:
         return {}

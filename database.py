@@ -30,6 +30,7 @@ class User(Base):
     vip_points = Column(Integer, default=0)
     total_spent = Column(Float, default=0.0)
     language = Column(String, default="en")
+    date_of_birth = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
