@@ -33,7 +33,7 @@ if JWTManager:
     jwt = JWTManager(app)
 
 mall_db = MallDatabase()
-segmentation_service.schedule_daily_update(mall_db)
+segmentation_service.schedule_daily_update()
 app.register_blueprint(wager_bp, url_prefix='/wager')
 mall_system = MallGamificationSystem()
 

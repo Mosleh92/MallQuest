@@ -104,7 +104,17 @@ class MallDatabase:
         shard_count: Optional[int] = None,
         shard_strategy: Optional[str] = None,
     ) -> None:
-        self.dsn = dsn or os.getenv("DATABASE_URL", "sqlite:///mall_gamification.db")
+        """Create a new :class:`MallDatabase` instance.
+
+        The database connection string defaults to a PostgreSQL DSN suitable
+        for production deployments but can be overridden via the ``DATABASE_URL``
+        environment variable. Tests may still supply a SQLite URL if desired.
+        """
+
+        default_url = (
+            "postgresql+psycopg2://mallquest:mallquest@localhost/mall_gamification"
+        )
+        self.dsn = dsn or os.getenv("DATABASE_URL", default_url)
         self.shard_count = shard_count or int(os.getenv("SHARD_COUNT", "1"))
         self.shard_strategy = shard_strategy or os.getenv("SHARD_STRATEGY", "hash")
 
@@ -113,7 +123,7 @@ class MallDatabase:
 
         for shard_id in range(self.shard_count):
             shard_dsn = self._dsn_for_shard(shard_id)
-            engine = create_engine(shard_dsn)
+            engine = create_engine(shard_dsn, pool_pre_ping=True)
             self.engines.append(engine)
             self.sessions.append(sessionmaker(bind=engine))
             Base.metadata.create_all(engine)
