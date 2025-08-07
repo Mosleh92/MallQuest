@@ -3,7 +3,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
-import threading
+import os
+
+from redis import Redis
+from rq import Queue
 
 from database import MallDatabase, User
 from notification_system import NotificationSystem
@@ -64,11 +67,34 @@ def update_segmentation_cache(db: MallDatabase) -> None:
     SEGMENTATION_CACHE = cache
 
 
+# Configure task queue
+redis_conn = Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
+queue = Queue("segmentation", connection=redis_conn)
+
+
+def update_segmentation_cache_job() -> None:
+    """Background job that refreshes the segmentation cache and reschedules itself."""
+    db = MallDatabase()
+    update_segmentation_cache(db)
+    try:
+        queue.enqueue_in(timedelta(days=1), update_segmentation_cache_job)
+    except Exception:  # pragma: no cover - Redis may be unavailable during tests
+        pass
+
+
 def get_users_by_segment(segment: str) -> List[Dict[str, Any]]:
     """Return cached users for a given segment."""
     return SEGMENTATION_CACHE.get(segment, [])
 
 
+ codex/update-database-configuration-to-postgresql
+def schedule_daily_update() -> None:
+    """Kick off the daily segmentation cache refresh job."""
+    try:
+        queue.enqueue(update_segmentation_cache_job)
+    except Exception:  # pragma: no cover - Redis may be unavailable during tests
+        pass
+=======
 def schedule_daily_update(db: MallDatabase) -> None:
     """Schedule daily segmentation refresh and notification dispatch."""
 
@@ -77,6 +103,7 @@ def schedule_daily_update(db: MallDatabase) -> None:
         threading.Timer(24 * 60 * 60, _job).start()
 
     _job()
+ main
 
 
 __all__ = [
@@ -84,5 +111,6 @@ __all__ = [
     "update_segmentation_cache",
     "get_users_by_segment",
     "schedule_daily_update",
+    "update_segmentation_cache_job",
 ]
 

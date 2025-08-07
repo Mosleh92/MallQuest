@@ -190,7 +190,7 @@ DEBUG=False
 LOG_LEVEL=WARNING
 SECRET_KEY=your-secure-secret-key-here
 JWT_SECRET_KEY=your-secure-jwt-secret-key-here
-DATABASE_URL=sqlite:///prod_mall_gamification.db
+DATABASE_URL=postgresql+psycopg2://mallquest:mallquest@localhost/mall_gamification
 REDIS_ENABLED=True
 REDIS_URL=redis://localhost:6379/0
 MISSION_TEMPLATE_CACHE_BACKEND=redis
@@ -199,12 +199,9 @@ MISSION_TEMPLATE_CACHE_TTL=600
 
 ### Step 4: Database Setup
 ```bash
-# Initialize production database
+# Create the PostgreSQL database and run migrations
+createdb mall_gamification
 alembic upgrade head
-
-# Set proper permissions
-chmod 600 prod_mall_gamification.db
-chown mallapp:mallapp prod_mall_gamification.db
 ```
 
 ### Step 5: Systemd Service Setup
