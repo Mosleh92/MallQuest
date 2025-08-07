@@ -6,12 +6,17 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from functools import wraps
 
+ codex/add-authentication-to-/admin/crm-route
 # codex/add-crm-route-and-template
 from database import MallDatabase, User, Receipt
 # =======
 # from database import MallDatabase
 from app.services import segmentation_service
 # main
+=======
+from database import MallDatabase, User, Receipt
+from app.services import segmentation_service
+ main
 from i18n import translator, get_locale
 from mallquest_wager.wager_routes import wager_bp
 from mall_gamification_system import MallGamificationSystem
@@ -81,8 +86,11 @@ def login():
     session['user_id'] = user_id
     return jsonify({'success': True, 'user_id': user_id})
 
+ codex/add-authentication-to-/admin/crm-route
 
 # codex/add-post-endpoint-for-purchases
+=======
+ main
 @app.route('/api/pos/purchase', methods=['POST'])
 def pos_purchase():
     """Record POS purchase and forward to purchase logger."""
@@ -106,6 +114,7 @@ def pos_purchase():
         return jsonify({'error': 'Unable to record purchase'}), 400
 
     return jsonify({'success': True}), 201
+ codex/add-authentication-to-/admin/crm-route
 # =======
 # codex/add-crm-route-and-template
 
@@ -119,6 +128,8 @@ def login_required(f):
     return decorated_function
 
 
+=======
+ main
 @app.route('/admin/crm', methods=['GET', 'POST'])
 @login_required
 def admin_crm():
@@ -227,8 +238,11 @@ def admin_crm():
         entry_data=entry_data,
         retention_data=retention_data,
     )
+ codex/add-authentication-to-/admin/crm-route
 # =======
 # codex/add-last_purchase_at-to-user-model
+=======
+ main
 @app.route('/admin/inactive-users')
 def inactive_users():
     """Return lists of dormant and lost users."""
@@ -248,7 +262,10 @@ def inactive_users():
             'lost': segmentation_service.get_users_by_segment('lost'),
         }
     )
+ codex/add-authentication-to-/admin/crm-route
 # =======
+=======
+ main
 @app.route('/api/purchases', methods=['GET'])
 def purchase_stats():
     """Return aggregated purchase statistics."""
@@ -257,9 +274,12 @@ def purchase_stats():
     range_param = request.args.get('range', 'daily')
     stats = mall_db.get_purchase_stats(range_param)
     return jsonify({'range': range_param, 'stats': stats})
+ codex/add-authentication-to-/admin/crm-route
 # main
 # main
 # main
+=======
+ main
 
 
 if __name__ == '__main__':
