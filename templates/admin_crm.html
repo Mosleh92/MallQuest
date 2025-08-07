@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Dashboard - Deerfields Mall</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-light: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        .dashboard-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            color: #777;
+        }
+    </style>
+</head>
+<body class="p-4">
+<div class="container">
+    <h1 class="text-white mb-4">CRM Dashboard</h1>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="dashboard-card text-center">
+                <div class="stat-number">{{ active_users }}</div>
+                <div class="stat-label">Active Users (7d)</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card text-center">
+                <div class="stat-number">{{ inactive_users }}</div>
+                <div class="stat-label">Inactive >30d</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card text-center">
+                <div class="stat-number">{{ average_visit_interval }}</div>
+                <div class="stat-label">Avg Visit Interval (days)</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card">
+                <h6>Top Store Sales</h6>
+                <ul class="list-unstyled mb-0">
+                    {% for store, total in top_store_sales.items() %}
+                    <li>{{ store }} - {{ '%.2f'|format(total) }}</li>
+                    {% else %}
+                    <li>No data</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="dashboard-card">
+        <canvas id="entryChart" height="100"></canvas>
+    </div>
+    <div class="dashboard-card">
+        <canvas id="retentionChart" height="100"></canvas>
+    </div>
+    <div class="text-end my-3">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#campaignModal">
+            <i class="fa fa-bullhorn"></i> Create Campaign
+        </button>
+    </div>
+</div>
+
+<!-- Campaign Modal -->
+<div class="modal fade" id="campaignModal" tabindex="-1" aria-labelledby="campaignModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="campaignModalLabel">Create Campaign</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="campaignForm">
+          <div class="mb-2">
+            <label class="form-label">Minimum Spend</label>
+            <input type="number" class="form-control" name="spend" min="0" step="0.01">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Brand</label>
+            <input type="text" class="form-control" name="brand">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Inactivity Days</label>
+            <input type="number" class="form-control" name="inactivity" min="0">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Minimum Age</label>
+            <input type="number" class="form-control" name="age" min="0">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Message</label>
+            <textarea class="form-control" name="message" rows="3" required></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="sendCampaignBtn">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const labels = {{ chart_labels|tojson }};
+const entryData = {{ entry_data|tojson }};
+const retentionData = {{ retention_data|tojson }};
+
+new Chart(document.getElementById('entryChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Daily Entries',
+            data: entryData,
+            borderColor: '#3498db',
+            fill: false
+        }]
+    }
+});
+
+new Chart(document.getElementById('retentionChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Daily Retention',
+            data: retentionData,
+            borderColor: '#2ecc71',
+            fill: false
+        }]
+    }
+});
+
+document.getElementById('sendCampaignBtn').addEventListener('click', () => {
+    const form = document.getElementById('campaignForm');
+    const formData = new FormData(form);
+    const data = {};
+    formData.forEach((value, key) => data[key] = value);
+    fetch('/admin/crm', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(resp => {
+        alert(`Campaign sent to ${resp.count} users.`);
+        form.reset();
+        const modal = bootstrap.Modal.getInstance(document.getElementById('campaignModal'));
+        modal.hide();
+    }).catch(() => alert('Error sending campaign'));
+});
+</script>
+</body>
+</html>
