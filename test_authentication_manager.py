@@ -382,6 +382,22 @@ def test_super_admin_role():
         return False
 
 
+def test_rbac_permissions():
+    """Test role-based permission checks"""
+    print("\n🧪 Testing RBAC Permissions")
+    print("=" * 40)
+
+    try:
+        token = auth_manager.generate_token("admin_user", UserRole.ADMIN.value)
+        assert auth_manager.has_permission(token, "manage_users")
+        assert not auth_manager.has_permission(token, "admin_panel")
+        print("✅ RBAC permission checks successful")
+        return True
+    except Exception as e:
+        print(f"❌ RBAC permission test failed: {e}")
+        return False
+
+
 def test_error_handling():
     """Test error handling and edge cases"""
     print("\n🧪 Testing Error Handling")

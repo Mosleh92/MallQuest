@@ -27,6 +27,16 @@ class UserRole(Enum):
     CUSTOMER_SERVICE = "customer_service"
     SYSTEM = "system"
 
+# Default role to permission mapping for simple RBAC
+ROLE_PERMISSIONS = {
+    UserRole.PLAYER.value: {"play"},
+    UserRole.SHOPKEEPER.value: {"play", "manage_store"},
+    UserRole.CUSTOMER_SERVICE.value: {"play", "support_users"},
+    UserRole.ADMIN.value: {"play", "manage_users"},
+    UserRole.SUPER_ADMIN.value: {"play", "manage_users", "admin_panel"},
+    UserRole.SYSTEM.value: {"play", "manage_system"},
+}
+
 class AuthenticationError(Exception):
     """Custom authentication error"""
     pass
@@ -53,6 +63,8 @@ class AuthenticationManager:
         self.rate_limits = {}      # Track rate limiting
         self.blacklisted_tokens = set()  # Track blacklisted tokens
         self.session_store = {}    # Store active sessions
+        # Role permissions
+        self.role_permissions = {role: perms.copy() for role, perms in ROLE_PERMISSIONS.items()}
         
         # Security settings
         self.max_failed_attempts = 5
@@ -305,6 +317,16 @@ class AuthenticationManager:
             return hash_obj.hexdigest() == hash_value
         except Exception:
             return False
+
+    def has_permission(self, token: str, permission: str) -> bool:
+        """Check if the token's associated role grants the given permission."""
+        try:
+            payload = self.verify_token(token)
+            role = payload.get('role')
+            permissions = self.role_permissions.get(role, set())
+            return permission in permissions
+        except AuthenticationError:
+            return False
     
     def get_user_sessions(self, user_id: str) -> List[Dict]:
         """Get all active sessions for a user"""
@@ -443,6 +465,31 @@ def require_any_role(*roles: str):
             _set_request_user(payload)
             return f(*args, **kwargs)
         
+        return decorated_function
+    return decorator
+
+def require_permission(permission: str):
+    """Decorator that checks for a specific permission."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            token = _extract_token_from_request()
+
+            if not token:
+                raise AuthenticationError("No authentication token provided")
+
+            try:
+                payload = auth_manager.verify_token(token)
+            except AuthenticationError as e:
+                raise AuthenticationError(f"Authentication failed: {str(e)}")
+
+            permissions = auth_manager.role_permissions.get(payload.get('role'), set())
+            if permission not in permissions:
+                raise AuthorizationError(f"Insufficient permissions. Required permission: {permission}")
+
+            _set_request_user(payload)
+            return f(*args, **kwargs)
+
         return decorated_function
     return decorator
 
