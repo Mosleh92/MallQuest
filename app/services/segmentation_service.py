@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Any
 import threading
 
 from database import MallDatabase, User
+from notification_system import NotificationSystem
 
 # Cached segmentation data
 SEGMENTATION_CACHE: Dict[str, List[Dict[str, Any]]] = {
@@ -33,8 +34,13 @@ def classify_user(
 
 
 def update_segmentation_cache(db: MallDatabase) -> None:
-    """Rebuild the segmentation cache from the database."""
+    """Rebuild the segmentation cache from the database and send reminders.
+
+    Users classified as ``dormant`` or ``lost`` will receive a notification via
+    :class:`NotificationSystem` encouraging them to return to the mall.
+    """
     cache = {"active": [], "dormant": [], "lost": []}
+    notifier = NotificationSystem()
     for session_factory in db.sessions:
         session = session_factory()
         try:
@@ -44,6 +50,14 @@ def update_segmentation_cache(db: MallDatabase) -> None:
                 segment = classify_user(last_entry, last_purchase)
                 data = {c.name: getattr(user, c.name) for c in user.__table__.columns}
                 cache[segment].append(data)
+                if segment in ("dormant", "lost"):
+                    user_id = data.get("user_id")
+                    if user_id:
+                        threading.Thread(
+                            target=notifier.create_notification,
+                            args=(user_id, "daily_login_reminder"),
+                            daemon=True,
+                        ).start()
         finally:
             session.close()
     global SEGMENTATION_CACHE
@@ -56,7 +70,7 @@ def get_users_by_segment(segment: str) -> List[Dict[str, Any]]:
 
 
 def schedule_daily_update(db: MallDatabase) -> None:
-    """Schedule daily segmentation cache updates."""
+    """Schedule daily segmentation refresh and notification dispatch."""
 
     def _job() -> None:
         update_segmentation_cache(db)
