@@ -2,6 +2,8 @@
 
 from flask_restx import Namespace, Resource
 
+from ...core import game_state
+
 
 ns = Namespace("quests", description="Quest operations")
 
@@ -11,5 +13,5 @@ class ListQuests(Resource):
     """List available quests."""
 
     def get(self):
-        return {"quests": []}
+        return {"quests": game_state.list_quests()}
 
