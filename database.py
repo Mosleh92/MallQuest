@@ -4,10 +4,19 @@ from __future__ import annotations
 
 import os
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, List
 
-from sqlalchemy import create_engine, Column, String, Integer, Float, JSON, DateTime
+from sqlalchemy import (
+    create_engine,
+    Column,
+    String,
+    Integer,
+    Float,
+    JSON,
+    DateTime,
+    Boolean,
+)
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.url import make_url
@@ -46,6 +55,15 @@ class Receipt(Base):
     status = Column(String, default="pending")
     items = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class NotificationLog(Base):
+    __tablename__ = "notification_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+    delivered = Column(Boolean, default=False)
 
 
 class MallDatabase:
@@ -159,6 +177,31 @@ class MallDatabase:
             return [{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows]
         finally:
             session.close()
+
+    def log_notification(self, user_id: str, message: str, delivered: bool) -> None:
+        """Record notification delivery attempts."""
+        session = self._session_for_key(user_id)
+        try:
+            log = NotificationLog(user_id=user_id, message=message, delivered=delivered)
+            session.add(log)
+            session.commit()
+        except Exception:
+            session.rollback()
+        finally:
+            session.close()
+
+    def get_dormant_users(self, days: int = 30) -> List[Dict[str, Any]]:
+        """Return users who haven't been updated within the given number of days."""
+        threshold = datetime.utcnow() - timedelta(days=days)
+        result: List[Dict[str, Any]] = []
+        for session_factory in self.sessions:
+            session = session_factory()
+            try:
+                rows = session.query(User).filter(User.updated_at < threshold).all()
+                result.extend({c.name: getattr(row, c.name) for c in row.__table__.columns} for row in rows)
+            finally:
+                session.close()
+        return result
 
     def close(self) -> None:
         for engine in self.engines:
