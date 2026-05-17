@@ -1,259 +1,138 @@
-# 🏬 MallQuest - Deerfields Mall Gamification System
+<div align="center">
 
-## 🌟 نظرة عامة على النظام
+# 🎮 MallQuest
 
-نظام MallQuest هو نظام متكامل للتشويق والتحفيز لمول ديرفيلدز، يوفر تجربة تفاعلية غنية للزوار مع ميزات مشابهة لألعاب مثل Hamster Kombat. النظام يدعم اللغتين العربية والإنجليزية ويشمل أربعة لوحات تحكم منفصلة.
+### Deerfields Mall Gamification System
 
-## 🎮 الميزات الرئيسية
+*Hamster-Kombat-style engagement • Bilingual (AR/EN) • 4 dashboards • Real-time rewards*
 
-### ✅ الميزات الأساسية
-- **دعم متعدد اللغات**: واجهة كاملة بالعربية والإنجليزية
-- **أربعة لوحات تحكم**:
-  1. **لوحة اللاعب**: المكافآت والمهام وتقديم الإيصالات
-  2. **لوحة المدير**: إدارة النظام والتحليلات
-  3. **لوحة البائع**: إدارة المتجر والرؤى
-  4. **لوحة خدمة العملاء**: إدارة تذاكر الدعم
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Gamification](https://img.shields.io/badge/Gamification-Engine-FF6B6B?style=for-the-badge)](.)
+[![Bilingual](https://img.shields.io/badge/Bilingual-AR%20%2F%20EN-4ECDC4?style=for-the-badge)](.)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](./LICENSE)
 
-### 🦌 نظام رعاية الغزلان (جديد!)
-- **أنواع الغزلان**: الأوريكس العربي، الغزال الصحراوي، غزال الجبل
-- **ميكانيكا الرعاية**: إطعام، تسلية، وإيواء الغزلان
-- **نظام النمو**: رفع مستوى الغزلان واكتشاف القدرات والتأثيرات البصرية
-- **نظام المأوى**: بناء أنواع مختلفة من الملاجئ للغزلان
+[Features](#-features) • [Architecture](#-architecture) • [Dashboards](#-four-dashboards) • [Licensing](#-licensing--contact)
 
-### 🏛️ نظام إدارة الإمبراطورية (جديد!)
-- **شراء المرافق**: شراء أنواع مختلفة من المرافق
-- **ترقية المرافق**: ترقية المرافق لأداء أفضل
-- **توليد الدخل**: المرافق تولد دخلاً مع مرور الوقت
-- **الأحداث الخاصة**: استضافة أحداث خاصة في المرافق
-- **مكافآت الإمبراطورية**: فتح مكافآت بناءً على عدد المرافق والمستويات
-
-### 📢 نظام الإشعارات (جديد!)
-- **أنواع متعددة من الإشعارات**: المهام، المكافآت، رفع المستوى، الأحداث، التذكيرات، الإنجازات، رعاية الغزلان، الإمبراطورية، الأمان، النظام
-- **مستويات الأولوية**: حرج، عالي، متوسط، منخفض
-- **الإغلاق التلقائي**: بعض الإشعارات تُغلق تلقائياً، والبعض الآخر يتطلب إجراء يدوي
-- **دعم الصوت**: أصوات مختلفة لأنواع مختلفة من الإشعارات
-- **نظام انتهاء الصلاحية**: الإشعارات تنتهي صلاحيتها بعد 7 أيام
-- **إدارة الإعدادات**: تفضيلات المستخدم لأنواع الإشعارات وساعات الهدوء
-
-### 🎯 ميزات التشويق
-- **توليد المهام بالذكاء الاصطناعي**: إنشاء مهام ديناميكية بناءً على سلوك المستخدم
-- **التحقق من الإيصالات**: التحقق من الإيصالات بالذكاء الاصطناعي مع كشف الاحتيال
-- **نظام التتابع**: تتابع تسجيل الدخول مع مكافآت إضافية
-- **نظام الرفيق**: رفقاء افتراضيون مع مكافآت
-- **الأحداث الموسمية**: أحداث خاصة مع مضاعفات إضافية
-- **مستويات VIP**: برونزية، فضية، ذهبية، بلاتينية
-
-### 🪙 MallCoin والتقدم الموحد
-- **عملة موحدة عبر الألعاب**: يتم تتبع MallCoin في جميع الألعاب ضمن النظام
-- **نظام تقدم مشترك**: مستويات وخبرة و إنجازات مشتركة بين الألعاب
-- **إمكانية التوسّع**: تمهيد لإدخال متاجر وعناصر خاصة تعتمد على MallCoin مستقبلًا
-
-### 🔒 الأمان والتحكم في الوصول
-- **الوصول داخل المول فقط**: النظام الكامل مقيد بشبكة واي فاي ديرفيلدز
-- **التحقق من الإيصالات**: التحقق من إيصالات المول فقط
-- **كشف النشاط المشبوه**: كشف الاحتيال التلقائي
-- **إشراف المدير**: إمكانيات إزالة الإيصالات يدوياً
-
-### 🎯 ميزات أبو ظبي الخاصة
-- **وضع رمضان**: ميزات موسمية خاصة
-- **أحداث اليوم الوطني**: احتفالات خاصة بالإمارات
-- **معاملة VIP**: ميزات الإقامة الذهبية والمقيمين المميزين
-- **تكامل العلامات التجارية الفاخرة**: قصر الإمارات، مجموعة لولو، الفطيم
-
-## 🚀 البدء السريع
-
-### المتطلبات الأساسية
-- Python 3.8+
-- إطار عمل Flask
-- متصفح ويب حديث
-- Redis (اختياري، للتخزين المؤقت المحسن)
-- SQLite (مدمج مع Python)
-
-### التثبيت
-
-1. **استنساخ المستودع**
-   ```bash
-   git clone https://github.com/Mosleh92/MallQuest.git
-   cd MallQuest
-   ```
-
-2. **تثبيت التبعيات**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **إعداد متغيرات البيئة**
-   ```bash
-   cp env.example .env
-   export FLASK_SECRET_KEY=your-secret-key  # Required for session security
-   # تحرير ملف .env حسب الحاجة
-   ```
-
-   تأكد من تعيين متغير البيئة `FLASK_SECRET_KEY` قبل تشغيل التطبيق، فهو ضروري لحماية الجلسات.
-
-4. **تشغيل النظام**
-   ```bash
-   python web_interface.py
-   ```
-
-## 🎮 كيفية اللعب
-
-### نظام رعاية الغزلان
-```python
-from deer_care_system import deer_care_system
-
-# إنشاء غزال جديد
-result = deer_care_system.create_deer("user123", "arabian_oryx")
-
-# إطعام الغزال
-result = deer_care_system.feed_deer("user123", "desert_grass")
-
-# تسلية الغزال
-result = deer_care_system.entertain_deer("user123", "star_gazing")
-
-# بناء مأوى
-result = deer_care_system.build_shelter("user123", "desert_oasis")
-```
-
-### نظام إدارة الإمبراطورية
-```python
-from empire_management_system import empire_management_system
-
-# إنشاء إمبراطورية
-result = empire_management_system.create_empire("user123")
-
-# شراء مرفق
-result = empire_management_system.purchase_facility("user123", "food_court", 5, 1000)
-
-# ترقية مرفق
-result = empire_management_system.upgrade_facility("user123", "facility_id", 1000)
-
-# جمع الدخل
-result = empire_management_system.collect_income("user123")
-```
-
-### نظام الإشعارات
-```python
-from notification_system import notification_system
-
-# إنشاء إشعار جديد
-result = notification_system.create_notification("user123", "new_daily_mission")
-
-# الحصول على إشعارات المستخدم
-result = notification_system.get_user_notifications("user123")
-
-# تحديد إشعار كمقروء
-result = notification_system.mark_as_read("user123", "notification_id")
-```
-
-## 📊 لوحات التحكم
-
-### لوحة اللاعب (`/player/<user_id>`)
-- إدارة الملف الشخصي للمستخدم
-- تقديم الإيصالات للحصول على عملات
-- نظام المهام المولدة بالذكاء الاصطناعي
-- تتبع المكافآت والإنجازات
-- نظام الرفيق الافتراضي
-- نظام التتابع
-- المشاركة في الأحداث النشطة
-
-### لوحة المدير (`/admin`)
-- تحليلات النظام
-- إحصائيات البائعين
-- إدارة الأحداث
-- مراقبة الإيصالات المشبوهة
-- إدارة المستخدمين والمكافآت
-
-### لوحة البائع (`/shopkeeper`)
-- إدارة المتجر
-- تتبع المبيعات والأداء
-- إدارة العروض والخصومات
-- تحليلات العملاء
-
-### لوحة خدمة العملاء (`/customer-service`)
-- إدارة تذاكر الدعم
-- معالجة استفسارات العملاء
-- تتبع المشاكل والحلول
-
-## 🔧 التكوين
-
-النظام يدعم أربع بيئات:
-- **التطوير** (`development`)
-- **الإنتاج** (`production`)
-- **الاختبار** (`testing`)
-- **المرحلة** (`staging`)
-
-يمكن تكوين كل بيئة من خلال ملف `config.py` أو متغيرات البيئة.
-
-## 🐳 النشر باستخدام Docker
-
-```bash
-# بناء الصورة
-docker build -t mallquest .
-
-# تشغيل الحاويات
-docker-compose up -d
-```
-
-## 🧪 الاختبار
-
-```bash
-# اختبار النظام الأساسي
-python test_system.py
-
-# اختبار الميزات المحسنة
-python test_enhanced_features.py
-
-# اختبار الأنظمة الجديدة
-python test_new_systems.py
-
-# اختبار شامل
-python test_integration_comprehensive.py
-```
-
-## 📁 هيكل المشروع
-
-```
-MallQuest/
-├── mall_gamification_system.py    # النظام الأساسي للتشويق
-├── web_interface.py               # تطبيق Flask
-├── database.py                    # نظام قاعدة البيانات
-├── deer_care_system.py           # نظام رعاية الغزلان (جديد)
-├── empire_management_system.py   # نظام إدارة الإمبراطورية (جديد)
-├── notification_system.py        # نظام الإشعارات (جديد)
-├── test_new_systems.py          # اختبار الأنظمة الجديدة
-├── requirements.txt              # تبعيات Python
-├── README.md                     # هذا الملف
-├── NEW_SYSTEMS_SUMMARY.md       # ملخص الأنظمة الجديدة
-└── templates/                    # قوالب HTML
-    ├── index.html
-    ├── player_dashboard.html
-    ├── admin_dashboard.html
-    ├── shopkeeper_dashboard.html
-    └── customer_service_dashboard.html
-```
-
-## 🤝 المساهمة
-
-نرحب بالمساهمات! يرجى:
-1. عمل Fork للمشروع
-2. إنشاء فرع للميزة الجديدة
-3. إجراء التغييرات
-4. إضافة الاختبارات
-5. إرسال Pull Request
-
-## 📄 الترخيص
-
-هذا المشروع مرخص تحت رخصة MIT.
-
-## 📞 الدعم
-
-للحصول على الدعم أو الإبلاغ عن المشاكل، يرجى فتح Issue في GitHub.
-
-## 🎉 الشكر
-
-شكراً لجميع المساهمين الذين ساعدوا في تطوير هذا النظام!
+</div>
 
 ---
 
-**MallQuest** - تجربة تشويق فريدة لمول ديرفيلدز 🏬✨ "# MallQuest" 
+## 💡 Overview
+
+**MallQuest** is an integrated **gamification & engagement platform** built for Deerfields Mall. It delivers an interactive experience to visitors with mechanics inspired by viral games like Hamster Kombat — tap-to-earn, daily quests, leaderboards, and tier-based rewards — all wired into the mall's real tenant ecosystem.
+
+> Turn every mall visit into a game. Increase footfall, dwell time, and tenant cross-traffic.
+
+---
+
+## ✨ Features
+
+### 🎯 Core Engagement
+- **Tap-to-earn** mechanics with combo multipliers
+- **Daily quests** tied to specific stores or zones
+- **Leaderboards** — global, friends, and weekly resets
+- **Achievement system** with collectible badges
+- **Tier progression** unlocking exclusive perks
+
+### 🌐 Bilingual
+- Full Arabic + English UI
+- RTL layout support
+- Localized content & notifications
+
+### 🎁 Reward Engine
+- Mall-credit, tenant discounts, exclusive offers
+- QR-code redemption at tenant POS
+- Anti-fraud and rate-limit safeguards
+
+### 🏬 Four Separate Dashboards
+- **Visitor App** — game UI, quests, rewards wallet
+- **Tenant Portal** — claim redemptions, offer creation
+- **Mall Operator** — campaign management, analytics
+- **Super Admin** — full system configuration
+
+---
+
+## 🏛️ Architecture
+
+```mermaid
+graph TB
+    subgraph "Visitor Experience"
+        APP[Visitor Mobile/Web App]
+    end
+
+    subgraph "Operator Tools"
+        TEN[Tenant Portal]
+        MAL[Mall Operator Dashboard]
+        ADM[Super Admin]
+    end
+
+    subgraph "Core Engine"
+        API[Python API]
+        GAME[Gamification Engine]
+        REW[Reward Service]
+        I18N[Bilingual Service AR/EN]
+    end
+
+    subgraph "Data"
+        DB[(Database)]
+        CACHE[(Cache)]
+    end
+
+    APP --> API
+    TEN & MAL & ADM --> API
+    API --> GAME
+    API --> REW
+    API --> I18N
+    GAME --> DB & CACHE
+    REW --> DB
+```
+
+---
+
+## 🏬 Four Dashboards
+
+| Audience | Purpose |
+|---|---|
+| 🛍️ **Visitor** | Play, earn, redeem |
+| 🏪 **Tenant** | Validate redemptions, run offers |
+| 🏢 **Mall Operator** | Launch campaigns, track engagement metrics |
+| 👑 **Super Admin** | Configure mechanics, manage tenants, audit |
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Backend** | Python |
+| **Frontend** | Bilingual (AR/EN) web UI |
+| **Gamification** | Custom engine with combos, quests, leaderboards |
+| **Rewards** | QR-based redemption flow |
+
+---
+
+## 📸 Screenshots
+
+> 🖼️ *Coming soon — visitor game UI, tenant portal, operator analytics.*
+
+---
+
+## 📄 Licensing & Contact
+
+This is **proprietary commercial software**. See [LICENSE](./LICENSE).
+
+**Available for:**
+- 🏬 Mall licensing & white-label deployment
+- 🎮 Custom gamification mechanics for retail
+- 🤝 Tenant network integration partnerships
+
+📧 **moslehmohammad2@gmail.com**
+🐙 [github.com/Mosleh92](https://github.com/Mosleh92)
+
+---
+
+<div align="center">
+
+⭐ *Star this repo if you find it useful!*
+
+</div>
